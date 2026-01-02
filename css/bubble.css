@@ -1,0 +1,106 @@
+/* 버블 공통 스타일 (비눗방울 효과) */
+.bubble {
+  position: absolute;
+
+  /* Flex 중앙 정렬 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  /* color: #1f2937; */
+  color: var(--bubble-text);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: grab;
+  user-select: none;
+
+  /* 기본 모양 및 애니메이션 */
+  border-radius: 50%;
+  /* Click target holds shape, but visual is canvas */
+  transition: transform 0.1s;
+}
+
+/* 생성 애니메이션 */
+.bubble.spawn {
+  animation: spawn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 터지는 애니메이션 */
+.bubble.pop {
+  animation: pop 0.3s ease-out forwards !important;
+  pointer-events: none;
+}
+
+/* 클릭 효과 (Pulse + Wobble 유지) */
+.bubble.click-anim {
+  /* clickPulse가 끝나도 wobble은 계속되도록 */
+  animation: clickPulse 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 선택된 상태 - 시각적 효과는 Canvas에서 처리 */
+/* 선택된 상태 - 시각적 효과는 Canvas에서 처리됨 */
+
+/* Root 버블 차별화 - 배경은 Canvas에서 처리 */
+.bubble.root {
+  font-weight: bold;
+  color: #0369a1;
+}
+
+/* 하이라이트 (광택) - Canvas에서 처리하므로 삭제 */
+
+
+/* 드래그 중 */
+.bubble.dragging {
+  cursor: grabbing;
+  opacity: 0.9;
+}
+
+/* Keyframes */
+/* Keyframes */
+@keyframes spawn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes clickPulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(0.9);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
