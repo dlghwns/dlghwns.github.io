@@ -16,6 +16,7 @@ const contentModal = document.getElementById("contentModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const contentModalHeader = document.getElementById("contentModalHeader");
 const clearBtn = document.getElementById("clearBtn");
 const sortCircularBtn = document.getElementById("sortCircularBtn");
 const sortTreeBtn = document.getElementById("sortTreeBtn");
@@ -290,14 +291,34 @@ function showContextMenu(x, y, bubble) {
         }
     }
 
-    if (hasContent) {
-        addContentBtn.style.display = "none";
-        viewContentBtn.style.display = "block";
-        deleteContentBtn.style.display = "block";
+    if (bubble.type === "root") {
+        addContentBtn.textContent = "개요 작성";
+        viewContentBtn.textContent = "개요 보기";
+        deleteContentBtn.textContent = "개요 삭제";
+
+        if (hasContent) {
+            addContentBtn.style.display = "none";
+            viewContentBtn.style.display = "block";
+            deleteContentBtn.style.display = "block";
+        } else {
+            addContentBtn.style.display = "block";
+            viewContentBtn.style.display = "none";
+            deleteContentBtn.style.display = "none";
+        }
     } else {
-        addContentBtn.style.display = "block";
-        viewContentBtn.style.display = "none";
-        deleteContentBtn.style.display = "none";
+        addContentBtn.textContent = "내용 추가하기";
+        viewContentBtn.textContent = "내용 보기";
+        deleteContentBtn.textContent = "내용 삭제";
+
+        if (hasContent) {
+            addContentBtn.style.display = "none";
+            viewContentBtn.style.display = "block";
+            deleteContentBtn.style.display = "block";
+        } else {
+            addContentBtn.style.display = "block";
+            viewContentBtn.style.display = "none";
+            deleteContentBtn.style.display = "none";
+        }
     }
 
     if (bubble.type === "root") {
@@ -689,6 +710,18 @@ function openContentModal() {
     const content = editingBubble.content;
     modalTitle.value = content.title;
     modalBody.value = content.body;
+
+    if (editingBubble.type === "root") {
+        contentModalHeader.textContent = "프로젝트 설정";
+        modalTitle.placeholder = "프로젝트 주제를 입력하세요";
+        modalBody.placeholder = "설명을 입력하세요";
+        modalBody.style.height = "120px";
+    } else {
+        contentModalHeader.textContent = "내용 편집";
+        modalTitle.placeholder = "제목을 입력하세요";
+        modalBody.placeholder = "내용을 입력하세요";
+        modalBody.style.height = "300px";
+    }
 
     contentModal.classList.add("show");
 
