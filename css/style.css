@@ -279,6 +279,12 @@ body {
   background-color: rgba(239, 68, 68, 0.1);
 }
 
+.menu-divider {
+  height: 1px;
+  background-color: var(--menu-border);
+  margin: 4px 0;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

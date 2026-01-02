@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Bubble } from "./bubble.js";
 import { Canvas } from "./canvas.js";
 import { saveBubbles, loadBubbles } from "./storage.js";
@@ -17,6 +16,9 @@ const contentModal = document.getElementById("contentModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const clearBtn = document.getElementById("clearBtn");
+const sortCircularBtn = document.getElementById("sortCircularBtn");
+const sortTreeBtn = document.getElementById("sortTreeBtn");
 
 function initTheme() {
     const savedTheme = localStorage.getItem("bubble_theme");
@@ -51,7 +53,7 @@ const canvas = new Canvas(canvasContainer);
 
 clearBtn.addEventListener("click", () => {
     if (canvas.bubbles.length === 0) return;
-    if (confirm("모든 버블????��?�시겠습?�까?")) {
+    if (confirm("모든 버블을 삭제하시겠습니까?")) {
         const allBubbles = [...canvas.bubbles];
         allBubbles.forEach(b => canvas.removeBubble(b));
         saveState();
@@ -125,7 +127,7 @@ function performSearch() {
     });
 
     if (searchMatches.length === 0) {
-        alert("검??결과가 ?�습?�다.");
+        alert("검색 결과가 없습니다.");
         exitSearchMode();
         return;
     }
@@ -235,6 +237,20 @@ function showContextMenu(x, y, bubble) {
         deleteContentBtn.style.display = "none";
     }
 
+    if (bubble.children && bubble.children.length > 0) {
+        sortCircularBtn.style.display = "block";
+        sortTreeBtn.style.display = "block";
+        if (contextMenu.querySelector(".menu-divider")) {
+            contextMenu.querySelector(".menu-divider").style.display = "block";
+        }
+    } else {
+        sortCircularBtn.style.display = "none";
+        sortTreeBtn.style.display = "none";
+        if (contextMenu.querySelector(".menu-divider")) {
+            contextMenu.querySelector(".menu-divider").style.display = "none";
+        }
+    }
+
     contextMenu.style.left = `${x}px`;
     contextMenu.style.top = `${y}px`;
     contextMenu.classList.add("show");
@@ -254,6 +270,51 @@ deleteBtn.addEventListener("click", () => {
         selectBubble(null);
     }
 });
+
+sortCircularBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        sortBubblesCircular(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+sortTreeBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        sortBubblesTree(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+function sortBubblesCircular(parent) {
+    const children = parent.children;
+    if (children.length === 0) return;
+
+    const radius = 180; // Distance from parent
+    const startAngle = -Math.PI / 2; // Start from top
+
+    children.forEach((child, i) => {
+        const angle = startAngle + (i / children.length) * Math.PI * 2;
+        child.targetX = parent.x + Math.cos(angle) * radius;
+        child.targetY = parent.y + Math.sin(angle) * radius;
+    });
+    saveState();
+}
+
+function sortBubblesTree(parent) {
+    const children = parent.children;
+    if (children.length === 0) return;
+
+    const spacing = 120;
+    const totalWidth = (children.length - 1) * spacing;
+    const startX = parent.x - totalWidth / 2;
+    const targetY = parent.y + 160;
+
+    children.forEach((child, i) => {
+        child.targetX = startX + i * spacing;
+        child.targetY = targetY;
+    });
+    saveState();
+}
 
 window.addEventListener("click", (e) => {
     if (contextMenu.classList.contains("show") && !contextMenu.contains(e.target)) {
@@ -298,7 +359,7 @@ viewContentBtn.addEventListener("click", () => {
 });
 
 deleteContentBtn.addEventListener("click", () => {
-    if (targetBubbleForMenu && confirm("?�용????��?�시겠습?�까?")) {
+    if (targetBubbleForMenu && confirm("내용을 삭제하시겠습니까?")) {
         targetBubbleForMenu.content = null;
         saveState();
         hideContextMenu();
@@ -514,7 +575,7 @@ function createBranchBubble(parent, text) {
 
     if (parent.children.length >= limit) {
         playAnimation(chatContainer, "animate__headShake");
-        alert(`??버블?�는 ???�상 가지�?만들 ???�습?�다.\n(${parent.type === 'root' ? '메인' : '가지'} 버블 최�?: ${limit}�?`);
+        alert(`이 버블에는 더 이상 가지를 만들 수 없습니다.\n(${parent.type === 'root' ? '메인' : '가지'} 버블 최대: ${limit}개)`);
         return;
     }
 

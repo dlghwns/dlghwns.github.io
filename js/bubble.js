@@ -77,10 +77,10 @@ export class Bubble {
   }
 
   tick(interaction) {
-    if (this.isDragging) {
-      const k = 0.15;
-      const damp = 0.8;
+    const k = 0.15;
+    const damp = 0.8;
 
+    if (this.isDragging) {
       const ax = (this.targetX - this.x) * k;
       const ay = (this.targetY - this.y) * k;
 
@@ -88,18 +88,28 @@ export class Bubble {
       this.vy += ay;
       this.vx *= damp;
       this.vy *= damp;
-
-      this.x += this.vx;
-      this.y += this.vy;
     } else {
-      this.vx *= 0.9;
-      this.vy *= 0.9;
-      this.x += this.vx;
-      this.y += this.vy;
+      // Smooth movement towards target even when not dragging (for sorting)
+      const ax = (this.targetX - this.x) * 0.08;
+      const ay = (this.targetY - this.y) * 0.08;
 
-      if (Math.abs(this.vx) < 0.01) this.vx = 0;
-      if (Math.abs(this.vy) < 0.01) this.vy = 0;
+      this.vx += ax;
+      this.vy += ay;
+      this.vx *= 0.8;
+      this.vy *= 0.8;
+
+      if (Math.abs(this.vx) < 0.01 && Math.abs(this.targetX - this.x) < 0.5) {
+        this.vx = 0;
+        this.x = this.targetX;
+      }
+      if (Math.abs(this.vy) < 0.01 && Math.abs(this.targetY - this.y) < 0.5) {
+        this.vy = 0;
+        this.y = this.targetY;
+      }
     }
+
+    this.x += this.vx;
+    this.y += this.vy;
 
     let targetBiasX = 0;
     let targetBiasY = 0;
@@ -218,13 +228,9 @@ export class Bubble {
       this.ctx.shadowBlur = 10;
 
     } else if (this.isHighlighted) {
-      if (isDark) {
-        this.ctx.strokeStyle = "rgba(52, 211, 153, 1)";
-        this.ctx.shadowColor = "rgba(52, 211, 153, 0.5)";
-      } else {
-        this.ctx.strokeStyle = "rgba(96, 165, 250, 1)";
-        this.ctx.shadowColor = "rgba(96, 165, 250, 0.6)";
-      }
+      // Both light and dark use green highlight now
+      this.ctx.strokeStyle = "rgba(52, 211, 153, 1)";
+      this.ctx.shadowColor = "rgba(52, 211, 153, 0.5)";
       this.ctx.lineWidth = 2.5;
       this.ctx.shadowBlur = 12;
 
