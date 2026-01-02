@@ -237,7 +237,7 @@ function showContextMenu(x, y, bubble) {
         deleteContentBtn.style.display = "none";
     }
 
-    if (bubble.children && bubble.children.length > 0) {
+    if (bubble.type === "root" && bubble.children && bubble.children.length > 0) {
         sortCircularBtn.style.display = "block";
         sortTreeBtn.style.display = "block";
         if (contextMenu.querySelector(".menu-divider")) {
@@ -285,34 +285,56 @@ sortTreeBtn.addEventListener("click", () => {
     }
 });
 
-function sortBubblesCircular(parent) {
-    const children = parent.children;
-    if (children.length === 0) return;
+function sortBubblesCircular(root) {
+    const arrangeLayer = (parent, startAngle, endAngle, depth) => {
+        const children = parent.children;
+        if (!children || children.length === 0) return;
 
-    const radius = 180; // Distance from parent
-    const startAngle = -Math.PI / 2; // Start from top
+        const radius = depth * 180;
+        const angleStep = (endAngle - startAngle) / children.length;
 
-    children.forEach((child, i) => {
-        const angle = startAngle + (i / children.length) * Math.PI * 2;
-        child.targetX = parent.x + Math.cos(angle) * radius;
-        child.targetY = parent.y + Math.sin(angle) * radius;
-    });
+        children.forEach((child, i) => {
+            const angle = startAngle + angleStep * (i + 0.5);
+            child.targetX = root.x + Math.cos(angle) * radius;
+            child.targetY = root.y + Math.sin(angle) * radius;
+
+            arrangeLayer(child, angle - angleStep / 2, angle + angleStep / 2, depth + 1);
+        });
+    };
+
+    arrangeLayer(root, 0, Math.PI * 2, 1);
     saveState();
 }
 
-function sortBubblesTree(parent) {
-    const children = parent.children;
-    if (children.length === 0) return;
+function sortBubblesTree(root) {
+    const spacingX = 140;
+    const spacingY = 160;
 
-    const spacing = 120;
-    const totalWidth = (children.length - 1) * spacing;
-    const startX = parent.x - totalWidth / 2;
-    const targetY = parent.y + 160;
+    const getSubtreeWidth = (node) => {
+        if (!node.children || node.children.length === 0) return spacingX;
+        let total = 0;
+        node.children.forEach(child => {
+            total += getSubtreeWidth(child);
+        });
+        return total;
+    };
 
-    children.forEach((child, i) => {
-        child.targetX = startX + i * spacing;
-        child.targetY = targetY;
-    });
+    const arrange = (node, startX, y) => {
+        const children = node.children;
+        if (!children || children.length === 0) return;
+
+        let currentX = startX;
+        children.forEach(child => {
+            const w = getSubtreeWidth(child);
+            child.targetX = currentX + w / 2;
+            child.targetY = y + spacingY;
+            arrange(child, currentX, y + spacingY);
+            currentX += w;
+        });
+    };
+
+    const rootWidth = getSubtreeWidth(root);
+    arrange(root, root.x - rootWidth / 2, root.y);
     saveState();
 }
 
