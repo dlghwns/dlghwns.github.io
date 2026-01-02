@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Bubble Mindmap</title>
+
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/bubble.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+</head>
+
+<body>
+
+  <div id="canvas"></div>
+
+  <div class="search-wrapper">
+    <button id="btnPrev" class="search-nav-btn" style="display: none;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+
+    <div class="search-bar">
+      <select id="searchType" style="display: none;">
+        <option value="all" selected>전체</option>
+        <option value="name">버블 이름</option>
+        <option value="title">내용 제목</option>
+        <option value="body">내용 본문</option>
+      </select>
+
+      <div class="custom-select" id="customSelect">
+        <div class="select-selected">전체</div>
+        <div class="select-items select-hide">
+          <div data-value="all" class="same-as-selected">전체</div>
+          <div data-value="name">버블 이름</div>
+          <div data-value="title">내용 제목</div>
+          <div data-value="body">내용 본문</div>
+        </div>
+      </div>
+      <input id="searchInput" placeholder="검색..." />
+      <button id="searchBtn">
+        <svg class="icon-search" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="M21 21l-4.35-4.35"></path>
+        </svg>
+        <svg class="icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" style="display: none;">
+          <path d="M18 6L6 18M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <button id="btnNext" class="search-nav-btn" style="display: none;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </button>
+  </div>
+
+  <button id="clearBtn" class="floating-btn" title="전체 삭제">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"
+        stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </button>
+
+  <button id="themeBtn" class="floating-btn" title="다크 모드 / 화이트 모드">
+    <svg class="theme-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2">
+      <circle cx="12" cy="12" r="5"></circle>
+      <path
+        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
+      </path>
+    </svg>
+  </button>
+
+  <div class="chat-wrapper">
+    <div class="chat-container">
+      <input id="chatInput" placeholder="버블 텍스트 입력" />
+      <button id="createBtn">생성</button>
+    </div>
+  </div>
+
+  <div id="contextMenu" class="context-menu animate__animated animate__fadeIn">
+    <div class="menu-header">속성</div>
+
+    <button id="addContentBtn" class="menu-item">내용 추가하기</button>
+    <button id="viewContentBtn" class="menu-item">내용 보기</button>
+    <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
+
+    <button id="deleteBtn" class="menu-item delete">버블 삭제</button>
+  </div>
+
+  <div id="contentModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn">
+      <h3>내용 편집</h3>
+      <input id="modalTitle" class="modal-input" placeholder="제목을 입력하세요" />
+      <textarea id="modalBody" class="modal-textarea" placeholder="내용을 입력하세요"></textarea>
+      <button id="closeModalBtn" class="modal-close">닫기</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
