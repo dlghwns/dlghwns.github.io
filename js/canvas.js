@@ -163,3 +163,4 @@ export class Canvas {
     requestAnimationFrame(() => this.loop());
   }
 }
+
