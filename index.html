@@ -89,16 +89,23 @@
   <div id="contextMenu" class="context-menu animate__animated animate__fadeIn">
     <div class="menu-header">메뉴</div>
 
+    <!-- Root Specific -->
     <button id="propertyBtn" class="menu-item">속성</button>
     <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
     <button id="sortTreeBtn" class="menu-item">트리 정렬</button>
     <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
-    <button id="deleteBtn" class="menu-item delete">삭제하기</button>
 
-    <div class="menu-divider" id="branchMenuDivider"></div>
-    <button id="addContentBtn" class="menu-item">내용 추가하기</button>
+    <div class="menu-divider" id="rootMenuDivider"></div>
+
+    <!-- Content Specific (Common) -->
     <button id="viewContentBtn" class="menu-item">내용 보기</button>
+    <button id="addContentBtn" class="menu-item">내용 추가하기</button>
     <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
+
+    <div class="menu-divider"></div>
+
+    <!-- Delete (Common) -->
+    <button id="deleteBtn" class="menu-item delete">삭제하기</button>
   </div>
 
   <div id="contentModal" class="modal-overlay">
@@ -147,6 +154,10 @@
           <div class="color-opt" data-color="#60a5fa" style="background: #60a5fa;"></div>
           <div class="color-opt" data-color="#a78bfa" style="background: #a78bfa;"></div>
           <div class="color-opt" data-color="#f472b6" style="background: #f472b6;"></div>
+        </div>
+        <div style="margin-top: 10px;">
+          <input type="text" id="hexInput" class="modal-input" placeholder="#FFFFFF"
+            style="width: 100%; height: 32px; font-family: monospace;">
         </div>
       </div>
 

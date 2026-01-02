@@ -36,7 +36,8 @@ const closePropertyModalBtn = document.getElementById("closePropertyModalBtn");
 const sizeRange = document.getElementById("sizeRange");
 const sizeValue = document.getElementById("sizeValue");
 const colorPalette = document.getElementById("colorPalette");
-const branchMenuDivider = document.getElementById("branchMenuDivider");
+const branchMenuDivider = document.getElementById("rootMenuDivider");
+const hexInput = document.getElementById("hexInput");
 
 const undoStack = [];
 
@@ -348,9 +349,9 @@ sortTreeBtn.addEventListener("click", () => {
     }
 });
 
-shareBubbleBtn.addEventListener("click", () => {
+shareBubbleBtn.addEventListener("click", async () => {
     if (targetBubbleForMenu) {
-        const code = generateShareCode(targetBubbleForMenu);
+        const code = await generateShareCode(targetBubbleForMenu);
         shareCodeOutput.value = code;
         shareModal.classList.add("show");
         hideContextMenu();
@@ -381,9 +382,18 @@ function openPropertyModal(bubble) {
 
     // Select current color
     const options = colorPalette.querySelectorAll(".color-opt");
+    let matched = false;
     options.forEach(opt => {
-        opt.classList.toggle("selected", opt.getAttribute("data-color") === bubble.color);
+        const isMatch = opt.getAttribute("data-color") === bubble.color;
+        opt.classList.toggle("selected", isMatch);
+        if (isMatch) matched = true;
     });
+
+    if (bubble.color !== 'default') {
+        hexInput.value = bubble.color.startsWith('#') ? bubble.color : '';
+    } else {
+        hexInput.value = '';
+    }
 
     propertyModal.classList.add("show");
 }
@@ -412,7 +422,24 @@ colorPalette.addEventListener("click", (e) => {
         colorPalette.querySelectorAll(".color-opt").forEach(o => o.classList.remove("selected"));
         opt.classList.add("selected");
 
+        if (color !== 'default' && color.startsWith('#')) {
+            hexInput.value = color;
+        }
+
         saveState();
+    }
+});
+
+hexInput.addEventListener("input", (e) => {
+    if (editingBubble) {
+        let val = e.target.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+
+        if (/^#[0-9A-F]{6}$/i.test(val)) {
+            editingBubble.color = val;
+            colorPalette.querySelectorAll(".color-opt").forEach(o => o.classList.remove("selected"));
+            saveState();
+        }
     }
 });
 
@@ -425,11 +452,11 @@ cancelImportBtn.addEventListener("click", () => {
     importModal.classList.remove("show");
 });
 
-doImportBtn.addEventListener("click", () => {
+doImportBtn.addEventListener("click", async () => {
     const code = importCodeInput.value.trim();
     if (!code) return;
 
-    const result = importBubblesByCode(code);
+    const result = await importBubblesByCode(code);
     if (result) {
         importModal.classList.remove("show");
         saveState();
@@ -438,7 +465,39 @@ doImportBtn.addEventListener("click", () => {
     }
 });
 
-function generateShareCode(root) {
+async function compressString(str) {
+    const stream = new Blob([str]).stream();
+    const compressedStream = stream.pipeThrough(new CompressionStream('gzip'));
+    const chunks = [];
+    const reader = compressedStream.getReader();
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+    }
+    const blob = new Blob(chunks);
+    const arrayBuffer = await blob.arrayBuffer();
+    return btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+}
+
+async function decompressToJSON(base64) {
+    try {
+        const binaryString = atob(base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        const stream = new Blob([bytes]).stream();
+        const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(decompressedStream).text();
+        return JSON.parse(text);
+    } catch (e) {
+        console.error("Decompression failed", e);
+        return null;
+    }
+}
+
+async function generateShareCode(root) {
     const allRelatedBubbles = [];
     const queue = [root];
     const visited = new Set();
@@ -466,16 +525,13 @@ function generateShareCode(root) {
     }
 
     const payload = JSON.stringify(allRelatedBubbles);
-    // Simple Base64 + some minor compression/encoding could be added here
-    // but for now let's use a URI-safe Base64
-    return btoa(unescape(encodeURIComponent(payload)));
+    return await compressString(payload);
 }
 
-function importBubblesByCode(code) {
+async function importBubblesByCode(code) {
     try {
-        const payload = decodeURIComponent(escape(atob(code)));
-        const data = JSON.parse(payload);
-        if (!Array.isArray(data)) return false;
+        const data = await decompressToJSON(code);
+        if (!data || !Array.isArray(data)) return false;
 
         const bubbleMap = new Map();
         const now = Date.now();

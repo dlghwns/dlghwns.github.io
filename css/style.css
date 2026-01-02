@@ -272,7 +272,6 @@ body {
 
 .menu-item.delete {
   color: #ef4444;
-  border-top: 1px solid var(--menu-border);
   margin-top: 4px;
 }
 
