@@ -79,6 +79,8 @@
 
   <div class="chat-wrapper">
     <div class="chat-container">
+      <button id="importBtn" title="버블 가져오기"
+        style="background:none; border:none; cursor:pointer; font-size:18px; margin-right:4px;">📥</button>
       <input id="chatInput" placeholder="버블 텍스트 입력" />
       <button id="createBtn">생성</button>
     </div>
@@ -90,6 +92,7 @@
     <button id="addContentBtn" class="menu-item">내용 추가하기</button>
     <button id="viewContentBtn" class="menu-item">내용 보기</button>
     <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
+    <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
 
     <div class="menu-divider"></div>
     <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
@@ -104,6 +107,29 @@
       <input id="modalTitle" class="modal-input" placeholder="제목을 입력하세요" />
       <textarea id="modalBody" class="modal-textarea" placeholder="내용을 입력하세요"></textarea>
       <button id="closeModalBtn" class="modal-close">닫기</button>
+    </div>
+  </div>
+
+  <div id="importModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 420px; padding: 20px;">
+      <h3>버블 가져오기</h3>
+      <textarea id="importCodeInput" class="modal-textarea" style="height: 100px; resize: none;"
+        placeholder="여기에 코드를 붙여넣으세요..."></textarea>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="cancelImportBtn" class="modal-close" style="background: #9ca3af;">취소</button>
+        <button id="doImportBtn" class="modal-close">불러오기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shareModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 420px; padding: 20px;">
+      <h3>버블 공유하기</h3>
+      <textarea id="shareCodeOutput" class="modal-textarea" style="height: 100px; resize: none;" readonly></textarea>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="closeShareModalBtn" class="modal-close" style="background: #9ca3af;">닫기</button>
+        <button id="copyShareBtn" class="modal-close">코드 복사</button>
+      </div>
     </div>
   </div>
 

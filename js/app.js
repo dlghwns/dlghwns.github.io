@@ -19,6 +19,53 @@ const closeModalBtn = document.getElementById("closeModalBtn");
 const clearBtn = document.getElementById("clearBtn");
 const sortCircularBtn = document.getElementById("sortCircularBtn");
 const sortTreeBtn = document.getElementById("sortTreeBtn");
+const shareBubbleBtn = document.getElementById("shareBubbleBtn");
+const importBtn = document.getElementById("importBtn");
+const importModal = document.getElementById("importModal");
+const importCodeInput = document.getElementById("importCodeInput");
+const doImportBtn = document.getElementById("doImportBtn");
+const cancelImportBtn = document.getElementById("cancelImportBtn");
+const shareModal = document.getElementById("shareModal");
+const shareCodeOutput = document.getElementById("shareCodeOutput");
+const copyShareBtn = document.getElementById("copyShareBtn");
+const closeShareModalBtn = document.getElementById("closeShareModalBtn");
+
+const undoStack = [];
+
+function pushUndoState() {
+    const bubblesData = canvas.bubbles.map(b => ({
+        id: b.id,
+        text: b.text,
+        type: b.type,
+        content: b.content,
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        parentId: b.parent ? b.parent.id : null
+    }));
+    undoStack.push(JSON.stringify(bubblesData));
+    if (undoStack.length > 50) undoStack.shift(); // Limit stack size
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+    const lastState = undoStack.pop();
+    const data = JSON.parse(lastState);
+
+    // Clear current
+    const allBubbles = [...canvas.bubbles];
+    allBubbles.forEach(b => canvas.removeBubble(b));
+
+    // Restore
+    initAppFromData(data);
+    saveState();
+}
+
+window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+    }
+});
 
 function initTheme() {
     const savedTheme = localStorage.getItem("bubble_theme");
@@ -54,6 +101,7 @@ const canvas = new Canvas(canvasContainer);
 clearBtn.addEventListener("click", () => {
     if (canvas.bubbles.length === 0) return;
     if (confirm("모든 버블을 삭제하시겠습니까?")) {
+        pushUndoState();
         const allBubbles = [...canvas.bubbles];
         allBubbles.forEach(b => canvas.removeBubble(b));
         saveState();
@@ -237,6 +285,12 @@ function showContextMenu(x, y, bubble) {
         deleteContentBtn.style.display = "none";
     }
 
+    if (bubble.type === "root") {
+        shareBubbleBtn.style.display = "block";
+    } else {
+        shareBubbleBtn.style.display = "none";
+    }
+
     if (bubble.type === "root" && bubble.children && bubble.children.length > 0) {
         sortCircularBtn.style.display = "block";
         sortTreeBtn.style.display = "block";
@@ -265,6 +319,7 @@ function hideContextMenu() {
 
 deleteBtn.addEventListener("click", () => {
     if (targetBubbleForMenu) {
+        pushUndoState();
         deleteCascade(targetBubbleForMenu);
         hideContextMenu();
         selectBubble(null);
@@ -284,6 +339,128 @@ sortTreeBtn.addEventListener("click", () => {
         hideContextMenu();
     }
 });
+
+shareBubbleBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        const code = generateShareCode(targetBubbleForMenu);
+        shareCodeOutput.value = code;
+        shareModal.classList.add("show");
+        hideContextMenu();
+    }
+});
+
+copyShareBtn.addEventListener("click", () => {
+    shareCodeOutput.select();
+    document.execCommand("copy");
+    alert("코드가 클립보드에 복사되었습니다!");
+});
+
+closeShareModalBtn.addEventListener("click", () => {
+    shareModal.classList.remove("show");
+});
+
+importBtn.addEventListener("click", () => {
+    importCodeInput.value = "";
+    importModal.classList.add("show");
+});
+
+cancelImportBtn.addEventListener("click", () => {
+    importModal.classList.remove("show");
+});
+
+doImportBtn.addEventListener("click", () => {
+    const code = importCodeInput.value.trim();
+    if (!code) return;
+
+    const result = importBubblesByCode(code);
+    if (result) {
+        importModal.classList.remove("show");
+        saveState();
+    } else {
+        alert("잘못된 코드이거나 가져오기에 실패했습니다.");
+    }
+});
+
+function generateShareCode(root) {
+    const allRelatedBubbles = [];
+    const queue = [root];
+    const visited = new Set();
+
+    while (queue.length > 0) {
+        const curr = queue.shift();
+        if (visited.has(curr.id)) continue;
+        visited.add(curr.id);
+
+        allRelatedBubbles.push({
+            i: curr.id,
+            t: curr.text,
+            type: curr.type,
+            c: curr.content,
+            x: Math.round(curr.x),
+            y: Math.round(curr.y),
+            p: curr.parent ? curr.parent.id : null
+        });
+
+        if (curr.children) {
+            queue.push(...curr.children);
+        }
+    }
+
+    const payload = JSON.stringify(allRelatedBubbles);
+    // Simple Base64 + some minor compression/encoding could be added here
+    // but for now let's use a URI-safe Base64
+    return btoa(unescape(encodeURIComponent(payload)));
+}
+
+function importBubblesByCode(code) {
+    try {
+        const payload = decodeURIComponent(escape(atob(code)));
+        const data = JSON.parse(payload);
+        if (!Array.isArray(data)) return false;
+
+        const bubbleMap = new Map();
+        const now = Date.now();
+        const idMap = new Map(); // New IDs to avoid conflicts
+
+        // First pass: Create bubbles
+        data.forEach((item, index) => {
+            const newId = now + index;
+            idMap.set(item.i, newId);
+
+            const bubble = new Bubble({
+                id: newId,
+                text: item.t,
+                type: item.type,
+                content: item.c,
+                x: item.x + 50, // Slight offset to distinguish
+                y: item.y + 50,
+                onUpdate: saveState,
+                onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble)
+            });
+
+            canvas.addBubble(bubble);
+            bindBubbleEvents(bubble);
+            bubbleMap.set(newId, bubble);
+        });
+
+        // Second pass: Connect
+        data.forEach(item => {
+            if (item.p && idMap.has(item.p)) {
+                const parent = bubbleMap.get(idMap.get(item.p));
+                const child = bubbleMap.get(idMap.get(item.i));
+                if (parent && child) {
+                    child.parent = parent;
+                    canvas.connect(parent, child);
+                }
+            }
+        });
+
+        return true;
+    } catch (e) {
+        console.error(e);
+        return false;
+    }
+}
 
 function sortBubblesMindMap(root) {
     const children = root.children;
@@ -472,6 +649,10 @@ function saveState() {
 
 function initApp() {
     const data = loadBubbles();
+    initAppFromData(data);
+}
+
+function initAppFromData(data) {
     if (data.length === 0) return;
 
     const bubbleMap = new Map();
@@ -485,7 +666,8 @@ function initApp() {
             x: item.x,
             y: item.y,
             onUpdate: saveState,
-            onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble)
+            onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble),
+            onDragStart: () => pushUndoState()
         });
 
         canvas.addBubble(bubble);
@@ -611,6 +793,7 @@ createBtn.addEventListener("click", (e) => {
 });
 
 function createRootBubble(text) {
+    pushUndoState();
     const pos = getRootPosition();
 
     const bubble = new Bubble({
@@ -620,7 +803,8 @@ function createRootBubble(text) {
         x: pos.x,
         y: pos.y,
         onUpdate: saveState,
-        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble)
+        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble),
+        onDragStart: () => pushUndoState()
     });
 
     canvas.addBubble(bubble);
@@ -639,6 +823,7 @@ function createBranchBubble(parent, text) {
         return;
     }
 
+    pushUndoState();
     const pos = getBranchPosition(parent);
 
     const child = new Bubble({
@@ -649,7 +834,8 @@ function createBranchBubble(parent, text) {
         y: pos.y,
         parent: parent,
         onUpdate: saveState,
-        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, child)
+        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, child),
+        onDragStart: () => pushUndoState()
     });
 
     canvas.addBubble(child);

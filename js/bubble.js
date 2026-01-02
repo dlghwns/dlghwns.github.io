@@ -1,5 +1,5 @@
 export class Bubble {
-  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick }) {
+  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd }) {
     this.id = id;
     this.text = text;
     this.type = type;
@@ -8,6 +8,8 @@ export class Bubble {
     this.children = [];
     this.onUpdate = onUpdate;
     this.onDblClick = onDblClick;
+    this.onDragStart = onDragStart;
+    this.onDragEnd = onDragEnd;
 
     this.radius = this.calcRadius();
 
@@ -89,7 +91,6 @@ export class Bubble {
       this.vx *= damp;
       this.vy *= damp;
     } else {
-      // Smooth movement towards target even when not dragging (for sorting)
       const ax = (this.targetX - this.x) * 0.08;
       const ay = (this.targetY - this.y) * 0.08;
 
@@ -166,19 +167,15 @@ export class Bubble {
     const segments = 60;
     for (let i = 0; i <= segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
-
       const noise =
         Math.sin(theta * 3 + time * 2 + this.noiseSeed) * 2 +
         Math.sin(theta * 5 - time * 1.5 + this.noiseSeed) * 1.5 +
         Math.sin(theta * 2 + time * 3) * 1;
 
       const breathing = Math.sin(time + this.noiseSeed) * 2;
-
       const dirX = Math.cos(theta);
       const dirY = Math.sin(theta);
-
       const biasStrength = (dirX * this.biasX) + (dirY * this.biasY);
-
       const currentR = r + noise + breathing + biasStrength;
 
       const x = cx + dirX * currentR;
@@ -190,7 +187,6 @@ export class Bubble {
     this.ctx.closePath();
 
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-
     const gradient = this.ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
 
     if (this.type === 'root') {
@@ -226,14 +222,11 @@ export class Bubble {
       }
       this.ctx.lineWidth = 3;
       this.ctx.shadowBlur = 10;
-
     } else if (this.isHighlighted) {
-      // Both light and dark use green highlight now
-      this.ctx.strokeStyle = "rgba(52, 211, 153, 1)";
-      this.ctx.shadowColor = "rgba(52, 211, 153, 0.5)";
-      this.ctx.lineWidth = 2.5;
-      this.ctx.shadowBlur = 12;
-
+      this.ctx.strokeStyle = "rgba(52, 211, 153, 0.7)";
+      this.ctx.shadowColor = "rgba(52, 211, 153, 0.3)";
+      this.ctx.lineWidth = 2.2;
+      this.ctx.shadowBlur = 8;
     } else {
       if (isDark) {
         this.ctx.strokeStyle = "rgba(209, 213, 219, 0.5)";
@@ -246,15 +239,11 @@ export class Bubble {
     this.ctx.stroke();
 
     this.ctx.shadowBlur = 0;
-
     this.ctx.beginPath();
-    const highlightR = r * 0.7;
     const hx = cx - r * 0.3;
     const hy = cy - r * 0.3;
-
     this.ctx.ellipse(hx, hy, r * 0.2, r * 0.1, -Math.PI / 4, 0, Math.PI * 2);
     const hGrad = this.ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 0.2);
-
     if (isDark) {
       hGrad.addColorStop(0, "rgba(255, 255, 255, 0.5)");
       hGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
@@ -262,7 +251,6 @@ export class Bubble {
       hGrad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
       hGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
     }
-
     this.ctx.fillStyle = hGrad;
     this.ctx.fill();
   }
@@ -270,12 +258,7 @@ export class Bubble {
   updateStyle() {
     this.el.style.left = `${this.x - this.radius}px`;
     this.el.style.top = `${this.y - this.radius}px`;
-
-    if (this.el.classList.contains("active")) {
-      this.isActive = true;
-    } else {
-      this.isActive = false;
-    }
+    this.isActive = this.el.classList.contains("active");
   }
 
   setActive(on) {
@@ -301,14 +284,19 @@ export class Bubble {
 
   initDrag() {
     let ox, oy;
+    let isMovingGroup = false;
 
     this.el.classList.add("spawn");
 
     this.el.addEventListener("mousedown", e => {
       this.isDragging = true;
+      isMovingGroup = e.ctrlKey;
       this.el.classList.add("dragging");
       ox = e.clientX - this.x;
       oy = e.clientY - this.y;
+
+      if (this.onDragStart) this.onDragStart();
+
       this.targetX = this.x;
       this.targetY = this.y;
       e.stopPropagation();
@@ -316,8 +304,27 @@ export class Bubble {
 
     window.addEventListener("mousemove", e => {
       if (!this.isDragging) return;
-      this.targetX = e.clientX - ox;
-      this.targetY = e.clientY - oy;
+
+      const newX = e.clientX - ox;
+      const newY = e.clientY - oy;
+      const dx = newX - this.x;
+      const dy = newY - this.y;
+
+      this.targetX = newX;
+      this.targetY = newY;
+
+      if (isMovingGroup) {
+        const moveDescendants = (bubble) => {
+          bubble.children.forEach(child => {
+            child.x += dx;
+            child.y += dy;
+            child.targetX += dx;
+            child.targetY += dy;
+            moveDescendants(child);
+          });
+        };
+        moveDescendants(this);
+      }
       if (this.onUpdate) this.onUpdate();
     });
 
@@ -325,9 +332,9 @@ export class Bubble {
       if (this.isDragging) {
         this.isDragging = false;
         this.el.classList.remove("dragging");
+        if (this.onDragEnd) this.onDragEnd();
         if (this.onUpdate) this.onUpdate();
       }
     });
   }
 }
-
