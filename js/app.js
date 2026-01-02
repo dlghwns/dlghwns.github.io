@@ -30,6 +30,14 @@ const shareCodeOutput = document.getElementById("shareCodeOutput");
 const copyShareBtn = document.getElementById("copyShareBtn");
 const closeShareModalBtn = document.getElementById("closeShareModalBtn");
 
+const propertyBtn = document.getElementById("propertyBtn");
+const propertyModal = document.getElementById("propertyModal");
+const closePropertyModalBtn = document.getElementById("closePropertyModalBtn");
+const sizeRange = document.getElementById("sizeRange");
+const sizeValue = document.getElementById("sizeValue");
+const colorPalette = document.getElementById("colorPalette");
+const branchMenuDivider = document.getElementById("branchMenuDivider");
+
 const undoStack = [];
 
 function pushUndoState() {
@@ -271,7 +279,13 @@ function showContextMenu(x, y, bubble) {
             const safeText = bubble.text.length > 10 ? bubble.text.slice(0, 10) + "..." : bubble.text;
             header.textContent = `메인버블 ${safeText}`;
         } else {
-            header.textContent = "가지버블";
+            // Find root parent to show its name
+            let root = bubble;
+            while (root.parent) {
+                root = root.parent;
+            }
+            const rootName = root.text.length > 8 ? root.text.slice(0, 8) + "..." : root.text;
+            header.textContent = `가지버블 - ${rootName}`;
         }
     }
 
@@ -286,23 +300,17 @@ function showContextMenu(x, y, bubble) {
     }
 
     if (bubble.type === "root") {
+        propertyBtn.style.display = "block";
         shareBubbleBtn.style.display = "block";
-    } else {
-        shareBubbleBtn.style.display = "none";
-    }
-
-    if (bubble.type === "root" && bubble.children && bubble.children.length > 0) {
         sortCircularBtn.style.display = "block";
         sortTreeBtn.style.display = "block";
-        if (contextMenu.querySelector(".menu-divider")) {
-            contextMenu.querySelector(".menu-divider").style.display = "block";
-        }
+        branchMenuDivider.style.display = "block";
     } else {
+        propertyBtn.style.display = "none";
+        shareBubbleBtn.style.display = "none";
         sortCircularBtn.style.display = "none";
         sortTreeBtn.style.display = "none";
-        if (contextMenu.querySelector(".menu-divider")) {
-            contextMenu.querySelector(".menu-divider").style.display = "none";
-        }
+        branchMenuDivider.style.display = "none";
     }
 
     contextMenu.style.left = `${x}px`;
@@ -359,6 +367,55 @@ closeShareModalBtn.addEventListener("click", () => {
     shareModal.classList.remove("show");
 });
 
+propertyBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        openPropertyModal(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+function openPropertyModal(bubble) {
+    editingBubble = bubble;
+    sizeRange.value = Math.round(bubble.radius);
+    sizeValue.textContent = Math.round(bubble.radius);
+
+    // Select current color
+    const options = colorPalette.querySelectorAll(".color-opt");
+    options.forEach(opt => {
+        opt.classList.toggle("selected", opt.getAttribute("data-color") === bubble.color);
+    });
+
+    propertyModal.classList.add("show");
+}
+
+closePropertyModalBtn.addEventListener("click", () => {
+    propertyModal.classList.remove("show");
+    editingBubble = null;
+});
+
+sizeRange.addEventListener("input", (e) => {
+    if (editingBubble) {
+        const val = parseInt(e.target.value);
+        sizeValue.textContent = val;
+        editingBubble.updateRadius(val);
+        saveState();
+    }
+});
+
+colorPalette.addEventListener("click", (e) => {
+    const opt = e.target.closest(".color-opt");
+    if (opt && editingBubble) {
+        const color = opt.getAttribute("data-color");
+        editingBubble.color = color;
+
+        // Update UI
+        colorPalette.querySelectorAll(".color-opt").forEach(o => o.classList.remove("selected"));
+        opt.classList.add("selected");
+
+        saveState();
+    }
+});
+
 importBtn.addEventListener("click", () => {
     importCodeInput.value = "";
     importModal.classList.add("show");
@@ -398,7 +455,9 @@ function generateShareCode(root) {
             c: curr.content,
             x: Math.round(curr.x),
             y: Math.round(curr.y),
-            p: curr.parent ? curr.parent.id : null
+            p: curr.parent ? curr.parent.id : null,
+            col: curr.color,
+            r: curr.radius
         });
 
         if (curr.children) {
@@ -434,8 +493,11 @@ function importBubblesByCode(code) {
                 content: item.c,
                 x: item.x + 50, // Slight offset to distinguish
                 y: item.y + 50,
+                color: item.col || 'default',
+                userRadius: item.r || null,
                 onUpdate: saveState,
-                onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble)
+                onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble),
+                onDragStart: () => pushUndoState()
             });
 
             canvas.addBubble(bubble);
@@ -644,7 +706,18 @@ async function deleteCascade(startBubble) {
 }
 
 function saveState() {
-    saveBubbles(canvas.bubbles);
+    const bubblesData = canvas.bubbles.map(b => ({
+        id: b.id,
+        text: b.text,
+        type: b.type,
+        content: b.content,
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        parentId: b.parent ? b.parent.id : null,
+        color: b.color,
+        radius: b.radius
+    }));
+    saveBubbles(bubblesData);
 }
 
 function initApp() {
@@ -665,6 +738,8 @@ function initAppFromData(data) {
             content: item.content,
             x: item.x,
             y: item.y,
+            color: item.color || 'default',
+            userRadius: item.radius || null,
             onUpdate: saveState,
             onDblClick: (e) => showContextMenu(e.clientX, e.clientY, bubble),
             onDragStart: () => pushUndoState()

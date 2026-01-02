@@ -1,5 +1,5 @@
 export class Bubble {
-  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd }) {
+  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd, color = 'default', userRadius = null }) {
     this.id = id;
     this.text = text;
     this.type = type;
@@ -10,6 +10,9 @@ export class Bubble {
     this.onDblClick = onDblClick;
     this.onDragStart = onDragStart;
     this.onDragEnd = onDragEnd;
+
+    this.color = color;
+    this.userRadius = userRadius;
 
     this.radius = this.calcRadius();
 
@@ -35,9 +38,32 @@ export class Bubble {
   }
 
   calcRadius() {
+    if (this.userRadius) return this.userRadius;
     const min = 30;
     const max = 80;
     return Math.min(max, Math.max(min, min + this.text.length * 6));
+  }
+
+  updateRadius(r) {
+    this.userRadius = r;
+    this.radius = r;
+    const size = this.radius * 2;
+    this.el.style.width = `${size}px`;
+    this.el.style.height = `${size}px`;
+
+    // Rescale canvas
+    const dpr = window.devicePixelRatio || 1;
+    const padding = 30;
+    const canvasSize = (size + padding * 2);
+    this.canvas.width = canvasSize * dpr;
+    this.canvas.height = canvasSize * dpr;
+    this.canvas.style.width = `${canvasSize}px`;
+    this.canvas.style.height = `${canvasSize}px`;
+    this.canvas.style.left = `-${padding}px`;
+    this.canvas.style.top = `-${padding}px`;
+    this.ctx.scale(dpr, dpr);
+
+    this.updateStyle();
   }
 
   createElement() {
@@ -189,24 +215,31 @@ export class Bubble {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     const gradient = this.ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
 
-    if (this.type === 'root') {
-      if (isDark) {
-        gradient.addColorStop(0, "rgba(56, 189, 248, 0.5)");
-        gradient.addColorStop(1, "rgba(56, 189, 248, 0.1)");
+    let bubbleColor = this.color;
+    if (bubbleColor === 'default') {
+      if (this.type === 'root') {
+        if (isDark) {
+          gradient.addColorStop(0, "rgba(56, 189, 248, 0.5)");
+          gradient.addColorStop(1, "rgba(56, 189, 248, 0.1)");
+        } else {
+          gradient.addColorStop(0, "rgba(224, 242, 254, 0.6)");
+          gradient.addColorStop(0.5, "rgba(224, 242, 254, 0.2)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+        }
       } else {
-        gradient.addColorStop(0, "rgba(224, 242, 254, 0.6)");
-        gradient.addColorStop(0.5, "rgba(224, 242, 254, 0.2)");
-        gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
+        if (isDark) {
+          gradient.addColorStop(0.1, "rgba(255, 255, 255, 0.15)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0.02)");
+        } else {
+          gradient.addColorStop(0.1, "rgba(255, 255, 255, 0.4)");
+          gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.1)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0.05)");
+        }
       }
     } else {
-      if (isDark) {
-        gradient.addColorStop(0.1, "rgba(255, 255, 255, 0.15)");
-        gradient.addColorStop(1, "rgba(255, 255, 255, 0.02)");
-      } else {
-        gradient.addColorStop(0.1, "rgba(255, 255, 255, 0.4)");
-        gradient.addColorStop(0.5, "rgba(255, 255, 255, 0.1)");
-        gradient.addColorStop(1, "rgba(255, 255, 255, 0.05)");
-      }
+      // Custom color
+      gradient.addColorStop(0, `${bubbleColor}88`); // Add some transparency
+      gradient.addColorStop(1, `${bubbleColor}22`);
     }
 
     this.ctx.fillStyle = gradient;
@@ -285,12 +318,17 @@ export class Bubble {
   initDrag() {
     let ox, oy;
     let isMovingGroup = false;
+    let isRightDragging = false;
 
     this.el.classList.add("spawn");
+
+    this.el.addEventListener("contextmenu", e => e.preventDefault());
 
     this.el.addEventListener("mousedown", e => {
       this.isDragging = true;
       isMovingGroup = e.ctrlKey;
+      isRightDragging = (e.button === 2);
+
       this.el.classList.add("dragging");
       ox = e.clientX - this.x;
       oy = e.clientY - this.y;
@@ -305,25 +343,44 @@ export class Bubble {
     window.addEventListener("mousemove", e => {
       if (!this.isDragging) return;
 
-      const newX = e.clientX - ox;
-      const newY = e.clientY - oy;
-      const dx = newX - this.x;
-      const dy = newY - this.y;
+      let newX = e.clientX - ox;
+      let newY = e.clientY - oy;
+
+      if (isRightDragging && this.parent) {
+        // Angle Snapping Logic
+        const dx = newX - this.parent.x;
+        const dy = newY - this.parent.y;
+        const dist = Math.hypot(dx, dy);
+        let angle = Math.atan2(dy, dx); // radians
+
+        const angleDeg = (angle * 180) / Math.PI;
+        const snapGrid = 15;
+        const snappedDeg = Math.round(angleDeg / snapGrid) * snapGrid;
+
+        if (Math.abs(angleDeg - snappedDeg) < 6) {
+          const snappedRad = (snappedDeg * Math.PI) / 180;
+          newX = this.parent.x + Math.cos(snappedRad) * dist;
+          newY = this.parent.y + Math.sin(snappedRad) * dist;
+        }
+      }
+
+      const dtx = newX - this.targetX;
+      const dty = newY - this.targetY;
 
       this.targetX = newX;
       this.targetY = newY;
 
       if (isMovingGroup) {
-        const moveDescendants = (bubble) => {
-          bubble.children.forEach(child => {
-            child.x += dx;
-            child.y += dy;
+        const moveDescendants = (node, dx, dy) => {
+          node.children.forEach(child => {
             child.targetX += dx;
             child.targetY += dy;
-            moveDescendants(child);
+            child.x += dx;
+            child.y += dy;
+            moveDescendants(child, dx, dy);
           });
         };
-        moveDescendants(this);
+        moveDescendants(this, dtx, dty);
       }
       if (this.onUpdate) this.onUpdate();
     });
@@ -331,6 +388,7 @@ export class Bubble {
     window.addEventListener("mouseup", () => {
       if (this.isDragging) {
         this.isDragging = false;
+        isRightDragging = false;
         this.el.classList.remove("dragging");
         if (this.onDragEnd) this.onDragEnd();
         if (this.onUpdate) this.onUpdate();

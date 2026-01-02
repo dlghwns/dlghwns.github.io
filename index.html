@@ -87,18 +87,18 @@
   </div>
 
   <div id="contextMenu" class="context-menu animate__animated animate__fadeIn">
-    <div class="menu-header">속성</div>
+    <div class="menu-header">메뉴</div>
 
+    <button id="propertyBtn" class="menu-item">속성</button>
+    <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
+    <button id="sortTreeBtn" class="menu-item">트리 정렬</button>
+    <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
+    <button id="deleteBtn" class="menu-item delete">삭제하기</button>
+
+    <div class="menu-divider" id="branchMenuDivider"></div>
     <button id="addContentBtn" class="menu-item">내용 추가하기</button>
     <button id="viewContentBtn" class="menu-item">내용 보기</button>
     <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
-    <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
-
-    <div class="menu-divider"></div>
-    <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
-    <button id="sortTreeBtn" class="menu-item">트리 정렬</button>
-
-    <button id="deleteBtn" class="menu-item delete">버블 삭제</button>
   </div>
 
   <div id="contentModal" class="modal-overlay">
@@ -129,6 +129,37 @@
       <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button id="closeShareModalBtn" class="modal-close" style="background: #9ca3af;">닫기</button>
         <button id="copyShareBtn" class="modal-close">코드 복사</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="propertyModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 350px;">
+      <h3>버블 속성 설정</h3>
+
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 색상</label>
+        <div id="colorPalette" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <div class="color-opt" data-color="default" style="background: #e5e7eb; border: 2px solid #3b82f6;"></div>
+          <div class="color-opt" data-color="#f87171" style="background: #f87171;"></div>
+          <div class="color-opt" data-color="#fbbf24" style="background: #fbbf24;"></div>
+          <div class="color-opt" data-color="#34d399" style="background: #34d399;"></div>
+          <div class="color-opt" data-color="#60a5fa" style="background: #60a5fa;"></div>
+          <div class="color-opt" data-color="#a78bfa" style="background: #a78bfa;"></div>
+          <div class="color-opt" data-color="#f472b6" style="background: #f472b6;"></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 크기</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <input type="range" id="sizeRange" min="30" max="120" value="50" style="flex: 1;">
+          <span id="sizeValue" style="font-size: 14px; width: 30px;">50</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="closePropertyModalBtn" class="modal-close">확인</button>
       </div>
     </div>
   </div>
