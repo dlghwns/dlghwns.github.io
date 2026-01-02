@@ -1,5 +1,5 @@
 export class Bubble {
-  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd, color = 'default', userRadius = null }) {
+  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd, color = 'default', userRadius = null, canvas = null }) {
     this.id = id;
     this.text = text;
     this.type = type;
@@ -10,12 +10,16 @@ export class Bubble {
     this.onDblClick = onDblClick;
     this.onDragStart = onDragStart;
     this.onDragEnd = onDragEnd;
-
     this.color = color;
     this.userRadius = userRadius;
+    this.mainCanvas = canvas; // Reference to the main Canvas controller
 
+    this.lineOptions = {
+      color: '#9ca3af',
+      width: 2,
+      style: 'solid'
+    };
     this.radius = this.calcRadius();
-
     this.x = x;
     this.y = y;
     this.vx = 0;
@@ -23,14 +27,10 @@ export class Bubble {
     this.targetX = x;
     this.targetY = y;
     this.isDragging = false;
-
     this.noiseSeed = Math.random() * 1000;
-
     this.biasX = 0;
     this.biasY = 0;
-
     this.isHighlighted = false;
-
     this.el = this.createElement();
     this.updateStyle();
     this.initDrag();
@@ -50,8 +50,6 @@ export class Bubble {
     const size = this.radius * 2;
     this.el.style.width = `${size}px`;
     this.el.style.height = `${size}px`;
-
-    // Rescale canvas
     const dpr = window.devicePixelRatio || 1;
     const padding = 30;
     const canvasSize = (size + padding * 2);
@@ -62,22 +60,18 @@ export class Bubble {
     this.canvas.style.left = `-${padding}px`;
     this.canvas.style.top = `-${padding}px`;
     this.ctx.scale(dpr, dpr);
-
     this.updateStyle();
   }
 
   createElement() {
     const el = document.createElement("div");
     el.className = `bubble ${this.type}`;
-
     const canvas = document.createElement("canvas");
     this.ctx = canvas.getContext("2d");
-
     const dpr = window.devicePixelRatio || 1;
     const size = this.radius * 2;
     const padding = 30;
     const canvasSize = (size + padding * 2);
-
     canvas.width = canvasSize * dpr;
     canvas.height = canvasSize * dpr;
     canvas.style.width = `${canvasSize}px`;
@@ -86,32 +80,26 @@ export class Bubble {
     canvas.style.left = `-${padding}px`;
     canvas.style.top = `-${padding}px`;
     canvas.style.zIndex = "0";
-
     this.ctx.scale(dpr, dpr);
     this.canvas = canvas;
     el.appendChild(canvas);
-
     const span = document.createElement("span");
     span.textContent = this.text;
     span.style.position = "relative";
     span.style.zIndex = "1";
     span.style.pointerEvents = "none";
     el.appendChild(span);
-
     el.style.width = `${size}px`;
     el.style.height = `${size}px`;
-
     return el;
   }
 
   tick(interaction) {
     const k = 0.15;
     const damp = 0.8;
-
     if (this.isDragging) {
       const ax = (this.targetX - this.x) * k;
       const ay = (this.targetY - this.y) * k;
-
       this.vx += ax;
       this.vy += ay;
       this.vx *= damp;
@@ -119,12 +107,10 @@ export class Bubble {
     } else {
       const ax = (this.targetX - this.x) * 0.08;
       const ay = (this.targetY - this.y) * 0.08;
-
       this.vx += ax;
       this.vy += ay;
       this.vx *= 0.8;
       this.vy *= 0.8;
-
       if (Math.abs(this.vx) < 0.01 && Math.abs(this.targetX - this.x) < 0.5) {
         this.vx = 0;
         this.x = this.targetX;
@@ -134,34 +120,27 @@ export class Bubble {
         this.y = this.targetY;
       }
     }
-
     this.x += this.vx;
     this.y += this.vy;
-
     let targetBiasX = 0;
     let targetBiasY = 0;
-
     if (interaction) {
       if (interaction.pan) {
         targetBiasX += interaction.pan.vx * 0.6;
         targetBiasY += interaction.pan.vy * 0.6;
       }
-
       if (interaction.mouse) {
         const mx = interaction.mouse.x;
         const my = interaction.mouse.y;
         const dist = Math.hypot(mx - this.x, my - this.y);
         const threshold = this.radius + 120;
-
         if (dist < threshold) {
           const relativeDist = dist / threshold;
           const factor = Math.pow(1 - relativeDist, 2);
-
           targetBiasX += interaction.mouse.vx * factor * 0.8;
           targetBiasY += interaction.mouse.vy * factor * 0.8;
         }
       }
-
       const maxDeformation = 40;
       const biasMag = Math.hypot(targetBiasX, targetBiasY);
       if (biasMag > maxDeformation) {
@@ -170,26 +149,20 @@ export class Bubble {
         targetBiasY *= scale;
       }
     }
-
     this.biasX += (targetBiasX - this.biasX) * 0.12;
     this.biasY += (targetBiasY - this.biasY) * 0.12;
-
     this.updateStyle();
     this.draw();
   }
 
   draw() {
     if (!this.ctx) return;
-
     const time = Date.now() / 1000;
     const r = this.radius;
     const cx = r + 30;
     const cy = r + 30;
-
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
     this.ctx.beginPath();
-
     const segments = 60;
     for (let i = 0; i <= segments; i++) {
       const theta = (i / segments) * Math.PI * 2;
@@ -197,24 +170,19 @@ export class Bubble {
         Math.sin(theta * 3 + time * 2 + this.noiseSeed) * 2 +
         Math.sin(theta * 5 - time * 1.5 + this.noiseSeed) * 1.5 +
         Math.sin(theta * 2 + time * 3) * 1;
-
       const breathing = Math.sin(time + this.noiseSeed) * 2;
       const dirX = Math.cos(theta);
       const dirY = Math.sin(theta);
       const biasStrength = (dirX * this.biasX) + (dirY * this.biasY);
       const currentR = r + noise + breathing + biasStrength;
-
       const x = cx + dirX * currentR;
       const y = cy + dirY * currentR;
-
       if (i === 0) this.ctx.moveTo(x, y);
       else this.ctx.lineTo(x, y);
     }
     this.ctx.closePath();
-
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     const gradient = this.ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, r * 0.1, cx, cy, r);
-
     let bubbleColor = this.color;
     if (bubbleColor === 'default') {
       if (this.type === 'root') {
@@ -237,40 +205,33 @@ export class Bubble {
         }
       }
     } else {
-      // Custom color
-      gradient.addColorStop(0, `${bubbleColor}88`); // Add some transparency
+      gradient.addColorStop(0, `${bubbleColor}88`);
       gradient.addColorStop(1, `${bubbleColor}22`);
     }
-
     this.ctx.fillStyle = gradient;
     this.ctx.fill();
-
     if (this.isActive) {
       if (isDark) {
-        this.ctx.strokeStyle = "rgba(103, 232, 249, 1)";
-        this.ctx.shadowColor = "rgba(103, 232, 249, 0.6)";
+        this.ctx.strokeStyle = "rgba(165, 243, 252, 1)";
+        this.ctx.shadowColor = "rgba(103, 232, 249, 0.8)";
       } else {
-        this.ctx.strokeStyle = "rgba(59, 130, 246, 0.8)";
-        this.ctx.shadowColor = "rgba(59, 130, 246, 0.5)";
+        this.ctx.strokeStyle = "rgba(37, 99, 235, 1)";
+        this.ctx.shadowColor = "rgba(37, 99, 235, 0.8)";
       }
-      this.ctx.lineWidth = 3;
-      this.ctx.shadowBlur = 10;
+      this.ctx.lineWidth = 4.5;
+      this.ctx.shadowBlur = 18;
     } else if (this.isHighlighted) {
       this.ctx.strokeStyle = "rgba(52, 211, 153, 0.7)";
       this.ctx.shadowColor = "rgba(52, 211, 153, 0.3)";
       this.ctx.lineWidth = 2.2;
       this.ctx.shadowBlur = 8;
     } else {
-      if (isDark) {
-        this.ctx.strokeStyle = "rgba(209, 213, 219, 0.5)";
-      } else {
-        this.ctx.strokeStyle = "rgba(60, 60, 60, 0.4)";
-      }
+      if (isDark) this.ctx.strokeStyle = "rgba(209, 213, 219, 0.5)";
+      else this.ctx.strokeStyle = "rgba(60, 60, 60, 0.4)";
       this.ctx.lineWidth = 1.5;
       this.ctx.shadowBlur = 0;
     }
     this.ctx.stroke();
-
     this.ctx.shadowBlur = 0;
     this.ctx.beginPath();
     const hx = cx - r * 0.3;
@@ -308,7 +269,6 @@ export class Bubble {
       e.stopPropagation();
       if (this.onDblClick) this.onDblClick(e);
     });
-
     this.el.addEventListener("click", () => {
       this.el.style.transform = "scale(0.95)";
       setTimeout(() => this.el.style.transform = "scale(1)", 100);
@@ -319,57 +279,52 @@ export class Bubble {
     let ox, oy;
     let isMovingGroup = false;
     let isRightDragging = false;
-
     this.el.classList.add("spawn");
-
     this.el.addEventListener("contextmenu", e => e.preventDefault());
-
     this.el.addEventListener("mousedown", e => {
       this.isDragging = true;
       isMovingGroup = e.ctrlKey;
       isRightDragging = (e.button === 2);
-
       this.el.classList.add("dragging");
-      ox = e.clientX - this.x;
-      oy = e.clientY - this.y;
+
+      ox = e.clientX;
+      oy = e.clientY;
+      this.startX = this.x;
+      this.startY = this.y;
 
       if (this.onDragStart) this.onDragStart();
-
       this.targetX = this.x;
       this.targetY = this.y;
       e.stopPropagation();
     });
-
     window.addEventListener("mousemove", e => {
       if (!this.isDragging) return;
 
-      let newX = e.clientX - ox;
-      let newY = e.clientY - oy;
+      const scale = (this.mainCanvas && this.mainCanvas.scale) || 1;
+      let dx = (e.clientX - ox) / scale;
+      let dy = (e.clientY - oy) / scale;
+
+      let newX = this.startX + dx;
+      let newY = this.startY + dy;
 
       if (isRightDragging && this.parent) {
-        // Angle Snapping Logic
-        const dx = newX - this.parent.x;
-        const dy = newY - this.parent.y;
-        const dist = Math.hypot(dx, dy);
-        let angle = Math.atan2(dy, dx); // radians
-
+        const pdx = newX - this.parent.x;
+        const pdy = newY - this.parent.y;
+        const dist = Math.hypot(pdx, pdy);
+        let angle = Math.atan2(pdy, pdx);
         const angleDeg = (angle * 180) / Math.PI;
         const snapGrid = 15;
         const snappedDeg = Math.round(angleDeg / snapGrid) * snapGrid;
-
         if (Math.abs(angleDeg - snappedDeg) < 6) {
           const snappedRad = (snappedDeg * Math.PI) / 180;
           newX = this.parent.x + Math.cos(snappedRad) * dist;
           newY = this.parent.y + Math.sin(snappedRad) * dist;
         }
       }
-
       const dtx = newX - this.targetX;
       const dty = newY - this.targetY;
-
       this.targetX = newX;
       this.targetY = newY;
-
       if (isMovingGroup) {
         const moveDescendants = (node, dx, dy) => {
           node.children.forEach(child => {
@@ -384,7 +339,6 @@ export class Bubble {
       }
       if (this.onUpdate) this.onUpdate();
     });
-
     window.addEventListener("mouseup", () => {
       if (this.isDragging) {
         this.isDragging = false;

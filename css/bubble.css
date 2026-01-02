@@ -4,16 +4,16 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-
   color: var(--bubble-text);
-
   font-size: 14px;
   font-weight: 500;
   cursor: grab;
   user-select: none;
-
   border-radius: 50%;
   transition: transform 0.1s;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 2;
 }
 
 .bubble.spawn {

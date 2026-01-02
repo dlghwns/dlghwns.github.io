@@ -2,14 +2,11 @@
   --canvas-bg: #E3E3E3;
   --panel-bg: #d1d1d1;
   --text-primary: #333;
-
-
   --menu-bg: white;
   --menu-header-bg: #f3f4f6;
   --menu-border: #e5e7eb;
   --menu-text: #374151;
   --menu-hover: #f9fafb;
-
   --bubble-root-text: #0369a1;
 }
 
@@ -18,13 +15,11 @@
   --panel-bg: #374151;
   --text-primary: #f3f4f6;
   --bubble-text: #e5e7eb;
-
   --menu-bg: #1f2937;
   --menu-header-bg: #111827;
   --menu-border: #374151;
   --menu-text: #e5e7eb;
   --menu-hover: #374151;
-
   --bubble-root-text: #ffffff;
 }
 
@@ -54,7 +49,6 @@
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-
   border: none;
   background-color: transparent;
   color: var(--text-primary);
@@ -64,7 +58,6 @@
   outline: none;
   cursor: pointer;
   margin-right: 8px;
-
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
@@ -223,6 +216,15 @@ body {
   background-color: #fee2e2;
 }
 
+#exportAllBtn {
+  left: 88px;
+  color: #3b82f6;
+}
+
+#exportAllBtn:hover {
+  background-color: #dbeafe;
+}
+
 #themeBtn {
   right: 30px;
   color: var(--text-primary);
@@ -313,7 +315,6 @@ body {
   flex-direction: column;
   gap: 16px;
   color: var(--text-primary);
-
   --animate-duration: 0.15s;
 }
 
@@ -333,7 +334,6 @@ body {
   outline: none;
 }
 
-/* Color Palette Styles */
 .color-opt {
   width: 30px;
   height: 30px;
@@ -402,7 +402,6 @@ body {
   background-color: transparent;
   padding: 8px 20px 8px 4px;
   cursor: pointer;
-
   background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239ca3af%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
   background-repeat: no-repeat;
   background-position: right 0px center;
@@ -436,4 +435,135 @@ body {
 .select-items div:hover,
 .same-as-selected {
   background-color: var(--menu-hover);
+}
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 20px;
+  margin-bottom: 15px;
+}
+
+.markdown-body li {
+  margin-bottom: 5px;
+}
+
+.markdown-body p {
+  margin-bottom: 15px;
+}
+
+.markdown-body strong {
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 15px;
+  color: #6b7280;
+  margin: 0 0 15px 0;
+}
+
+.markdown-body code {
+  background: #f3f4f6;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+[data-theme="dark"] .markdown-body code {
+  background: #374151;
+}
+
+[data-theme="dark"] .markdown-body strong {
+  color: #60a5fa;
+}
+
+.selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+}
+
+.selection-guide {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  pointer-events: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#cancelSelectionBtn {
+  background: #ef4444;
+  border: none;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.bubble.blur-out {
+  filter: blur(4px) grayscale(0.5);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.bubble.selection-target {
+  box-shadow: 0 0 25px #10b981 !important;
+  transform: scale(1.1);
+  cursor: crosshair;
+}
+
+.style-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--menu-border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.style-btn:hover {
+  background: var(--menu-hover);
+}
+
+.style-btn.selected {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+#minimapContainer:hover {
+  opacity: 1;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }

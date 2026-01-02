@@ -1,27 +1,22 @@
 <!DOCTYPE html>
 <html lang="ko">
 
-
 <head>
   <meta charset="UTF-8" />
   <title>Bubble Mindmap</title>
-
   <link rel="stylesheet" href="css/style.css" />
   <link rel="stylesheet" href="css/bubble.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 </head>
 
 <body>
-
   <div id="canvas"></div>
-
   <div class="search-wrapper">
     <button id="btnPrev" class="search-nav-btn" style="display: none;">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
-
     <div class="search-bar">
       <select id="searchType" style="display: none;">
         <option value="all" selected>전체</option>
@@ -29,7 +24,6 @@
         <option value="title">내용 제목</option>
         <option value="body">내용 본문</option>
       </select>
-
       <div class="custom-select" id="customSelect">
         <div class="select-selected">전체</div>
         <div class="select-items select-hide">
@@ -52,71 +46,133 @@
         </svg>
       </button>
     </div>
-
     <button id="btnNext" class="search-nav-btn" style="display: none;">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </button>
   </div>
-
   <button id="clearBtn" class="floating-btn" title="전체 삭제">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"
         stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   </button>
-
-  <button id="themeBtn" class="floating-btn" title="다크 모드 / 화이트 모드">
-    <svg class="theme-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      stroke-width="2">
+  <button id="exportAllBtn" class="floating-btn" title="모든 데이터 내보내기">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13" stroke-linecap="round"
+        stroke-linejoin="round" />
+    </svg>
+  </button>
+  <button id="themeBtn" class="floating-btn" title="테마 전환">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="5"></circle>
       <path
         d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
       </path>
     </svg>
   </button>
-
   <div class="chat-wrapper">
     <div class="chat-container">
-      <button id="importBtn" title="버블 가져오기"
+      <button id="importBtn" title="가져오기"
         style="background:none; border:none; cursor:pointer; font-size:18px; margin-right:4px;">📥</button>
       <input id="chatInput" placeholder="버블 텍스트 입력" />
       <button id="createBtn">생성</button>
     </div>
   </div>
-
   <div id="contextMenu" class="context-menu animate__animated animate__fadeIn">
     <div class="menu-header">메뉴</div>
-
-    <!-- Root Specific -->
-    <button id="propertyBtn" class="menu-item">속성</button>
-    <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
-    <button id="sortTreeBtn" class="menu-item">트리 정렬</button>
-    <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
-
-    <div class="menu-divider" id="rootMenuDivider"></div>
-
-    <!-- Content Specific (Common) -->
-    <button id="viewContentBtn" class="menu-item">내용 보기</button>
-    <button id="addContentBtn" class="menu-item">내용 추가하기</button>
-    <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
-
-    <div class="menu-divider"></div>
-
-    <!-- Delete (Common) -->
+    <div id="menuPropertyGroup">
+      <button id="propertyBtn" class="menu-item">🎨 디자인 속성</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuSortGroup">
+      <button id="sortCircularBtn" class="menu-item">마인드맵 정렬</button>
+      <button id="sortTreeBtn" class="menu-item">트리 정렬</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuOverviewGroup">
+      <button id="viewContentBtn" class="menu-item">내용 보기</button>
+      <button id="addContentBtn" class="menu-item">내용 작성</button>
+      <button id="deleteContentBtn" class="menu-item" style="color:#f59e0b;">내용 삭제</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuLineGroup">
+      <button id="changeLineBtn" class="menu-item">선 변경하기</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuShareGroup">
+      <button id="shareBubbleBtn" class="menu-item" style="color:#10b981;">공유하기</button>
+      <div class="menu-divider"></div>
+    </div>
     <button id="deleteBtn" class="menu-item delete">삭제하기</button>
   </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <div id="contentModal" class="modal-overlay">
     <div class="modal-content animate__animated animate__zoomIn">
-      <h3 id="contentModalHeader">내용 편집</h3>
-      <input id="modalTitle" class="modal-input" placeholder="제목을 입력하세요" />
-      <textarea id="modalBody" class="modal-textarea" placeholder="내용을 입력하세요"></textarea>
-      <button id="closeModalBtn" class="modal-close">닫기</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 id="contentModalHeader" style="margin: 0;">내용 편집</h3>
+        <button id="toggleEditBtn"
+          style="background: none; border: none; font-size: 14px; color: #3b82f6; cursor: pointer; text-decoration: underline;">수정하기</button>
+      </div>
+      <div id="editArea">
+        <input id="modalTitle" class="modal-input" placeholder="제목을 입력하세요" />
+        <textarea id="modalBody" class="modal-textarea" placeholder="내용을 입력하세요"></textarea>
+      </div>
+      <div id="viewArea" style="display: none; max-height: 400px; overflow-y: auto;">
+        <h2 id="viewTitle"
+          style="margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--menu-border); padding-bottom: 8px;">
+        </h2>
+        <div id="viewBody" class="markdown-body"></div>
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 15px;">
+        <button id="closeModalBtn" class="modal-close" style="background: #9ca3af;">취소</button>
+        <button id="saveContentBtn" class="modal-close">저장</button>
+      </div>
     </div>
   </div>
-
+  <div id="lineStyleModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 360px;">
+      <h3>🎨 선 스타일 설정</h3>
+      <div class="property-group">
+        <label>선 색상</label>
+        <div id="lineColorPalette" class="color-palette" style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <div class="color-opt" data-color="#9ca3af" style="background:#9ca3af"></div>
+          <div class="color-opt" data-color="#3b82f6" style="background:#3b82f6"></div>
+          <div class="color-opt" data-color="#10b981" style="background:#10b981"></div>
+          <div class="color-opt" data-color="#f59e0b" style="background:#f59e0b"></div>
+          <div class="color-opt" data-color="#ef4444" style="background:#ef4444"></div>
+          <div class="color-opt" data-color="#8b5cf6" style="background:#8b5cf6"></div>
+        </div>
+        <div style="margin-top: 10px;">
+          <input type="text" id="lineHexInput" class="modal-input" placeholder="#9CA3AF"
+            style="width: 100%; height: 32px; font-family: monospace;">
+        </div>
+      </div>
+      <div class="property-group">
+        <label>선 두께: <span id="lineWidthValue">2</span>px</label>
+        <input type="range" id="lineWidthRange" min="1" max="10" value="2" style="width:100%" />
+      </div>
+      <div class="property-group">
+        <label>선 모양</label>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button class="style-btn" data-style="solid">실선</button>
+          <button class="style-btn" data-style="dashed">점선 (대시)</button>
+          <button class="style-btn" data-style="dotted">점선 (도트)</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;">
+        <button id="closeLineModalBtn" class="modal-close" style="background: #9ca3af;">취소</button>
+        <button id="saveLineStyleBtn" class="modal-close">적용하기</button>
+      </div>
+    </div>
+  </div>
+  <div id="selectionOverlay" class="selection-overlay" style="display: none;">
+    <div class="selection-guide">
+      <span id="selectionGuideText">끝점 버블을 선택하세요</span>
+      <button id="cancelSelectionBtn">취소</button>
+    </div>
+  </div>
   <div id="importModal" class="modal-overlay">
     <div class="modal-content animate__animated animate__zoomIn" style="width: 420px; padding: 20px;">
       <h3>버블 가져오기</h3>
@@ -128,7 +184,6 @@
       </div>
     </div>
   </div>
-
   <div id="shareModal" class="modal-overlay">
     <div class="modal-content animate__animated animate__zoomIn" style="width: 420px; padding: 20px;">
       <h3>버블 공유하기</h3>
@@ -139,11 +194,20 @@
       </div>
     </div>
   </div>
-
+  <div id="exportAllModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 420px; padding: 20px;">
+      <h3>모든 데이터 내보내기</h3>
+      <textarea id="exportAllCodeOutput" class="modal-textarea" style="height: 150px; resize: none;"
+        readonly></textarea>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="closeExportAllModalBtn" class="modal-close" style="background: #9ca3af;">닫기</button>
+        <button id="copyExportAllBtn" class="modal-close">코드 복사</button>
+      </div>
+    </div>
+  </div>
   <div id="propertyModal" class="modal-overlay">
     <div class="modal-content animate__animated animate__zoomIn" style="width: 350px;">
       <h3>버블 속성 설정</h3>
-
       <div style="margin-bottom: 15px;">
         <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 색상</label>
         <div id="colorPalette" style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -160,7 +224,6 @@
             style="width: 100%; height: 32px; font-family: monospace;">
         </div>
       </div>
-
       <div style="margin-bottom: 20px;">
         <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 크기</label>
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -168,13 +231,11 @@
           <span id="sizeValue" style="font-size: 14px; width: 30px;">50</span>
         </div>
       </div>
-
       <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button id="closePropertyModalBtn" class="modal-close">확인</button>
       </div>
     </div>
   </div>
-
   <script type="module" src="js/app.js"></script>
 </body>
 
