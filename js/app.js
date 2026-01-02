@@ -273,7 +273,7 @@ deleteBtn.addEventListener("click", () => {
 
 sortCircularBtn.addEventListener("click", () => {
     if (targetBubbleForMenu) {
-        sortBubblesCircular(targetBubbleForMenu);
+        sortBubblesMindMap(targetBubbleForMenu);
         hideContextMenu();
     }
 });
@@ -285,38 +285,76 @@ sortTreeBtn.addEventListener("click", () => {
     }
 });
 
-function sortBubblesCircular(root) {
-    const arrangeLayer = (parent, startAngle, endAngle, depth) => {
-        const children = parent.children;
+function sortBubblesMindMap(root) {
+    const children = root.children;
+    if (!children || children.length === 0) return;
+
+    const spacingX = 160;
+    const spacingY = 100;
+
+    const getSubtreeHeight = (node) => {
+        if (!node.children || node.children.length === 0) return 80;
+        let total = 0;
+        node.children.forEach(child => {
+            total += getSubtreeHeight(child);
+        });
+        return Math.max(total, 80);
+    };
+
+    const arrangeSide = (node, x, startY, direction) => {
+        const children = node.children;
         if (!children || children.length === 0) return;
 
-        const radius = depth * 180;
-        const angleStep = (endAngle - startAngle) / children.length;
-
-        children.forEach((child, i) => {
-            const angle = startAngle + angleStep * (i + 0.5);
-            child.targetX = root.x + Math.cos(angle) * radius;
-            child.targetY = root.y + Math.sin(angle) * radius;
-
-            arrangeLayer(child, angle - angleStep / 2, angle + angleStep / 2, depth + 1);
+        let currentY = startY;
+        children.forEach(child => {
+            const h = getSubtreeHeight(child);
+            child.targetX = x + spacingX * direction;
+            child.targetY = currentY + h / 2;
+            arrangeSide(child, child.targetX, currentY, direction);
+            currentY += h;
         });
     };
 
-    arrangeLayer(root, 0, Math.PI * 2, 1);
+    const half = Math.ceil(children.length / 2);
+    const rightChildren = children.slice(0, half);
+    const leftChildren = children.slice(half);
+
+    // Right Side
+    let rightTotalH = rightChildren.reduce((sum, c) => sum + getSubtreeHeight(c), 0);
+    let currentYRight = root.y - rightTotalH / 2;
+    rightChildren.forEach(child => {
+        const h = getSubtreeHeight(child);
+        child.targetX = root.x + spacingX;
+        child.targetY = currentYRight + h / 2;
+        arrangeSide(child, child.targetX, currentYRight, 1);
+        currentYRight += h;
+    });
+
+    // Left Side
+    let leftTotalH = leftChildren.reduce((sum, c) => sum + getSubtreeHeight(c), 0);
+    let currentYLeft = root.y - leftTotalH / 2;
+    leftChildren.forEach(child => {
+        const h = getSubtreeHeight(child);
+        child.targetX = root.x - spacingX;
+        child.targetY = currentYLeft + h / 2;
+        arrangeSide(child, child.targetX, currentYLeft, -1);
+        currentYLeft += h;
+    });
+
     saveState();
 }
 
 function sortBubblesTree(root) {
-    const spacingX = 140;
-    const spacingY = 160;
+    const spacingX = 100; // More compact
+    const spacingY = 140;
 
     const getSubtreeWidth = (node) => {
-        if (!node.children || node.children.length === 0) return spacingX;
+        if (!node.children || node.children.length === 0) return 80; // Compact width
         let total = 0;
         node.children.forEach(child => {
             total += getSubtreeWidth(child);
         });
-        return total;
+        return Math.max(total, 80);
     };
 
     const arrange = (node, startX, y) => {
