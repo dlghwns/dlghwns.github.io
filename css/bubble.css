@@ -11,9 +11,9 @@
   user-select: none;
   border-radius: 50%;
   transition: transform 0.1s;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  z-index: 2;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 10;
 }
 
 .bubble.spawn {
@@ -92,7 +92,20 @@
 }
 
 .bubble.hyper {
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  /* Match square-ish silhouette */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  font-weight: bold;
+  pointer-events: auto;
+}
+
+.bubble.hyper span {
+  font-size: 1.2rem;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .bubble.textbox {
@@ -103,6 +116,12 @@
   padding: 10px;
   min-width: 100px;
   min-height: 50px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.bubble.textbox.highlighted {
+  border-color: rgba(52, 211, 153, 1) !important;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.5) !important;
 }
 
 .bubble.textbox textarea {

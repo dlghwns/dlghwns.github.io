@@ -44,7 +44,7 @@ export class Canvas {
     svg.style.height = "100%";
     svg.style.pointerEvents = "none";
     svg.style.overflow = "visible";
-    svg.style.zIndex = "1";
+    svg.style.zIndex = "5";
     return svg;
   }
 
@@ -57,6 +57,7 @@ export class Canvas {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("stroke", "#9ca3af");
     line.setAttribute("stroke-width", "2");
+    line.setAttribute("stroke-linecap", "round");
     this.svg.appendChild(line);
     parent.children.push(child);
     this.lines.push({ line, parent, child });

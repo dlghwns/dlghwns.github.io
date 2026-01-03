@@ -42,7 +42,7 @@ export class Bubble {
   }
 
   calcRadius() {
-    if (this.type === 'textbox') return 50; // Textbox uses width/height instead of radius
+    if (this.type === 'textbox' || this.type === 'hyper') return 50;
     if (this.userRadius) return this.userRadius;
     const min = 30;
     const max = 80;
@@ -103,7 +103,7 @@ export class Bubble {
       const canvas = document.createElement("canvas");
       this.ctx = canvas.getContext("2d");
       const dpr = window.devicePixelRatio || 1;
-      const size = this.radius * 2;
+      const size = this.type === 'hyper' ? this.radius * 1.5 : this.radius * 2;
       const padding = 30;
       const canvasSize = (size + padding * 2);
       canvas.width = canvasSize * dpr;
@@ -236,27 +236,61 @@ export class Bubble {
   draw() {
     if (!this.ctx) return;
     const time = Date.now() / 1000;
+    const size = this.type === 'hyper' ? this.radius * 1.5 : this.radius * 2;
+    const padding = 30;
     const r = this.radius;
-    const cx = r + 30;
-    const cy = r + 30;
+    const cx = size / 2 + padding;
+    const cy = size / 2 + padding;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.beginPath();
     const segments = 60;
-    for (let i = 0; i <= segments; i++) {
-      const theta = (i / segments) * Math.PI * 2;
-      const noise =
-        Math.sin(theta * 3 + time * 2 + this.noiseSeed) * 2 +
-        Math.sin(theta * 5 - time * 1.5 + this.noiseSeed) * 1.5 +
-        Math.sin(theta * 2 + time * 3) * 1;
-      const breathing = Math.sin(time + this.noiseSeed) * 2;
-      const dirX = Math.cos(theta);
-      const dirY = Math.sin(theta);
-      const biasStrength = (dirX * this.biasX) + (dirY * this.biasY);
-      const currentR = r + noise + breathing + biasStrength;
-      const x = cx + dirX * currentR;
-      const y = cy + dirY * currentR;
-      if (i === 0) this.ctx.moveTo(x, y);
-      else this.ctx.lineTo(x, y);
+
+    if (this.type === 'hyper') {
+      const hw = (this.radius * 1.5) / 2;
+      const hh = (this.radius * 1.5) / 2;
+
+      // Square path with organic noise
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const theta = t * Math.PI * 2;
+        const dirX = Math.cos(theta);
+        const dirY = Math.sin(theta);
+
+        // Projecting circle to square
+        const scale = 1 / Math.max(Math.abs(dirX), Math.abs(dirY));
+        const baseStartX = dirX * scale * hw;
+        const baseStartY = dirY * scale * hh;
+
+        const noise =
+          Math.sin(theta * 3 + time * 2 + this.noiseSeed) * 2 +
+          Math.sin(theta * 5 - time * 1.5 + this.noiseSeed) * 1.5;
+        const breathing = Math.sin(time + this.noiseSeed) * 2;
+        const biasStrength = (dirX * this.biasX) + (dirY * this.biasY);
+
+        const offset = noise + breathing + biasStrength;
+        const px = cx + baseStartX + dirX * offset;
+        const py = cy + baseStartY + dirY * offset;
+
+        if (i === 0) this.ctx.moveTo(px, py);
+        else this.ctx.lineTo(px, py);
+      }
+    } else {
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        const noise =
+          Math.sin(theta * 3 + time * 2 + this.noiseSeed) * 2 +
+          Math.sin(theta * 5 - time * 1.5 + this.noiseSeed) * 1.5 +
+          Math.sin(theta * 2 + time * 3) * 1;
+        const breathing = Math.sin(time + this.noiseSeed) * 2;
+        const dirX = Math.cos(theta);
+        const dirY = Math.sin(theta);
+        const biasStrength = (dirX * this.biasX) + (dirY * this.biasY);
+        const currentR = r + noise + breathing + biasStrength;
+        const x = cx + dirX * currentR;
+        const y = cy + dirY * currentR;
+        if (i === 0) this.ctx.moveTo(x, y);
+        else this.ctx.lineTo(x, y);
+      }
     }
     this.ctx.closePath();
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
@@ -345,10 +379,17 @@ export class Bubble {
 
   setHighlighted(on) {
     this.isHighlighted = on;
+    this.el.classList.toggle("highlighted", on);
   }
 
   initEvents() {
     this.el.addEventListener("contextmenu", (e) => {
+      if (this.moved) {
+        this.moved = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       if (this.onContextMenu) this.onContextMenu(e);
@@ -370,6 +411,7 @@ export class Bubble {
     this.el.addEventListener("contextmenu", e => e.preventDefault());
     this.el.addEventListener("mousedown", e => {
       this.isDragging = true;
+      this.moved = false;
       isMovingGroup = e.ctrlKey;
       isRightDragging = (e.button === 2);
       this.el.classList.add("dragging");
@@ -408,11 +450,18 @@ export class Bubble {
           newY = this.parent.y + Math.sin(snappedRad) * dist;
         }
       }
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        this.moved = true;
+      }
+
       const dtx = newX - this.targetX;
       const dty = newY - this.targetY;
       this.targetX = newX;
       this.targetY = newY;
-      if (isMovingGroup) {
+
+      const currentIsMovingGroup = isMovingGroup || e.ctrlKey;
+      if (currentIsMovingGroup) {
         const moveDescendants = (node, dx, dy) => {
           node.children.forEach(child => {
             child.targetX += dx;

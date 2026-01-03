@@ -319,8 +319,13 @@ function openContentModal(isViewMode = false) {
         modalBody.style.height = "300px";
     }
 
-    if (isViewMode && editingBubble.content.body) showViewMode();
-    else showEditMode();
+    if (isViewMode && editingBubble.content.body) {
+        showViewMode();
+        closeModalBtn.textContent = "닫기";
+    } else {
+        showEditMode();
+        closeModalBtn.textContent = "취소";
+    }
 
     contentModal.classList.add("show");
     hideContextMenu();
@@ -462,6 +467,7 @@ function showContextMenu(x, y, bubble) {
         menuLineGroup.style.display = "block";
         const hasLines = canvas.lines.some(l => l.parent === bubble || l.child === bubble);
         deleteLineBtn.style.display = hasLines ? "block" : "none";
+        changeLineBtn.style.display = hasLines ? "block" : "none";
 
         if (hasContent) {
             addContentBtn.style.display = "none";
@@ -563,6 +569,23 @@ function startGenericConnectionMode(bubble) {
 function handleGenericConnection(targetBubble) {
     if (targetBubble === lineSelectionStartBubble) return;
     pushUndoState();
+
+    // Ensure the target becomes a child of the start bubble
+    // If target already has a parent, remove it from old parent's children
+    if (targetBubble.parent) {
+        const oldP = targetBubble.parent;
+        oldP.children = oldP.children.filter(c => c !== targetBubble);
+        const lineIndex = canvas.lines.findIndex(l => l.parent === oldP && l.child === targetBubble);
+        if (lineIndex !== -1) {
+            const lineObj = canvas.lines[lineIndex];
+            if (lineObj.line && lineObj.line.parentNode) {
+                lineObj.line.parentNode.removeChild(lineObj.line);
+            }
+            canvas.lines.splice(lineIndex, 1);
+        }
+    }
+
+    targetBubble.parent = lineSelectionStartBubble;
     canvas.connect(lineSelectionStartBubble, targetBubble);
     saveState();
     endLineSelectionMode();
@@ -619,15 +642,12 @@ function handleLineDeletion(targetBubble) {
 function bindBubbleEvents(bubble) {
     bubble.el.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (bubble.moved) {
+            bubble.moved = false; // Reset for next click
+            return;
+        }
         if (isLineSelectionMode) {
-            if (lineSelectionStartBubble.type === 'hyper' && !isLineDeletionMode) {
-                // Keep old hyper logic if needed, but we'll use generic
-                handleGenericConnection(bubble);
-            } else if (isLineDeletionMode) {
-                handleLineDeletion(bubble);
-            } else {
-                handleGenericConnection(bubble);
-            }
+            handleBubbleClickInSelectionMode(bubble);
         } else if (isHyperlinkSelectionMode) {
             hyperlinkTargetBubble = bubble;
             updateSelectedBubbleInfo();
@@ -690,16 +710,18 @@ function createRootBubble(text) {
     const x = 100 + Math.random() * (window.innerWidth - 200);
     const y = 100 + Math.random() * (window.innerHeight - 200);
     const b = createBubbleInstance({ id: Date.now(), text, type: "root", x, y });
+    focusBubble(b);
     selectBubble(b);
     saveState();
 }
 
 function createBranchBubble(parent, text, x, y) {
     pushUndoState();
-    const finalX = x ?? parent.x + 100;
-    const finalY = y ?? parent.y + 100;
+    const finalX = x ?? (parent ? parent.x + 100 : 100);
+    const finalY = y ?? (parent ? parent.y + 100 : 100);
     const b = createBubbleInstance({ id: Date.now(), text, type: "branch", parent, x: finalX, y: finalY });
-    canvas.connect(parent, b);
+    if (parent) canvas.connect(parent, b);
+    focusBubble(b);
     selectBubble(b);
     saveState();
 }
@@ -707,6 +729,7 @@ function createBranchBubble(parent, text, x, y) {
 function createTextbox(x, y) {
     pushUndoState();
     const b = createBubbleInstance({ id: Date.now(), text: "", type: "textbox", x, y });
+    focusBubble(b);
     selectBubble(b);
     saveState();
 }
@@ -714,6 +737,7 @@ function createTextbox(x, y) {
 function createHyperBubble(x, y) {
     pushUndoState();
     const b = createBubbleInstance({ id: Date.now(), text: "🔗", type: "hyper", x, y });
+    focusBubble(b);
     selectBubble(b);
     saveState();
 }
@@ -877,36 +901,28 @@ addHyperBubbleBtn.addEventListener("click", () => {
 
 connectLineBtn.addEventListener("click", () => {
     if (targetBubbleForMenu && targetBubbleForMenu.type === 'hyper') {
-        startHyperConnectionMode(targetBubbleForMenu);
+        startGenericConnectionMode(targetBubbleForMenu);
         hideContextMenu();
     }
 });
 
-function startHyperConnectionMode(bubble) {
-    isLineSelectionMode = true;
-    lineSelectionStartBubble = bubble;
-    selectionOverlay.style.display = "flex";
-    document.getElementById("selectionGuideText").textContent = "연결할 대상 버블을 선택하세요.";
-
-    canvas.bubbles.forEach(b => {
-        if (b === bubble) return;
-        b.el.classList.add("selection-target");
-    });
-    playAnimation(selectionOverlay, "animate__fadeInDown");
-}
-
 function handleHyperConnection(targetBubble) {
+    // Hyper bubble connection logic: Hyper bubble (start) joins target bubble (as child)
+    // This is the opposite of generic connection, because hyper bubble is usually the 'link' item
     if (targetBubble === lineSelectionStartBubble) return;
 
     pushUndoState();
-    // If hyper bubble already has a parent, remove it from old parent's children
     if (lineSelectionStartBubble.parent) {
         const oldP = lineSelectionStartBubble.parent;
         oldP.children = oldP.children.filter(c => c !== lineSelectionStartBubble);
-        canvas.lines = canvas.lines.filter(l => !(l.parent === oldP && l.child === lineSelectionStartBubble));
-        // Remove line from SVG is handled by canvas if it's there
-        const oldLine = canvas.svg.querySelector(`line[x1="${oldP.x}"][y1="${oldP.y}"][x2="${lineSelectionStartBubble.x}"][y2="${lineSelectionStartBubble.y}"]`);
-        if (oldLine && oldLine.parentNode) oldLine.parentNode.removeChild(oldLine);
+        const lineIndex = canvas.lines.findIndex(l => l.parent === oldP && l.child === lineSelectionStartBubble);
+        if (lineIndex !== -1) {
+            const lineObj = canvas.lines[lineIndex];
+            if (lineObj.line && lineObj.line.parentNode) {
+                lineObj.line.parentNode.removeChild(lineObj.line);
+            }
+            canvas.lines.splice(lineIndex, 1);
+        }
     }
 
     lineSelectionStartBubble.parent = targetBubble;
@@ -918,10 +934,12 @@ function handleHyperConnection(targetBubble) {
 // Update handleBubbleClickInSelectionMode to support hyper bubble connection
 const originalHandleBubbleClick = handleBubbleClickInSelectionMode;
 handleBubbleClickInSelectionMode = (targetBubble) => {
-    if (lineSelectionStartBubble.type === 'hyper') {
+    if (isLineDeletionMode) {
+        handleLineDeletion(targetBubble);
+    } else if (lineSelectionStartBubble.type === 'hyper') {
         handleHyperConnection(targetBubble);
     } else {
-        originalHandleBubbleClick(targetBubble);
+        handleGenericConnection(targetBubble);
     }
 };
 
