@@ -155,24 +155,27 @@ export class Canvas {
     }
   }
 
+  getMouseWorldCoords() {
+    return {
+      x: (this.mouseX - this.panX) / this.scale,
+      y: (this.mouseY - this.panY) / this.scale
+    };
+  }
+
   loop() {
     const mouseVx = this.mouseX - this.prevMouseX;
     const mouseVy = this.mouseY - this.prevMouseY;
     const panVx = this.panX - this.prevPanX;
     const panVy = this.panY - this.prevPanY;
 
-    // Scale-aware world coordinate calculation
-    const mouseWorldX = (this.mouseX - this.panX) / this.scale;
-    const mouseWorldY = (this.mouseY - this.panY) / this.scale;
+    const { x: mouseWorldX, y: mouseWorldY } = this.getMouseWorldCoords();
 
     const interaction = {
       mouse: { x: mouseWorldX, y: mouseWorldY, vx: mouseVx / this.scale, vy: mouseVy / this.scale },
       pan: { vx: panVx / this.scale, vy: panVy / this.scale }
     };
 
-    this.bubbles.forEach(b => {
-      if (b.tick) b.tick(interaction);
-    });
+    this.bubbles.forEach(b => b.tick?.(interaction));
 
     this.updateLines();
     this.onRenderCallbacks.forEach(cb => cb());

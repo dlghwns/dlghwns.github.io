@@ -1,5 +1,5 @@
 export class Bubble {
-  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onDblClick, onDragStart, onDragEnd, color = 'default', userRadius = null, canvas = null }) {
+  constructor({ id, text, type, content = null, x, y, parent = null, onUpdate, onContextMenu, onDragStart, onDragEnd, color = 'default', userRadius = null, canvas = null }) {
     this.id = id;
     this.text = text;
     this.type = type;
@@ -7,7 +7,7 @@ export class Bubble {
     this.parent = parent;
     this.children = [];
     this.onUpdate = onUpdate;
-    this.onDblClick = onDblClick;
+    this.onContextMenu = onContextMenu;
     this.onDragStart = onDragStart;
     this.onDragEnd = onDragEnd;
     this.color = color;
@@ -18,6 +18,10 @@ export class Bubble {
       color: '#9ca3af',
       width: 2,
       style: 'solid'
+    };
+    this.hyperlink = {
+      type: 'none', // 'none', 'url', 'bubble'
+      target: ''
     };
     this.radius = this.calcRadius();
     this.x = x;
@@ -38,10 +42,11 @@ export class Bubble {
   }
 
   calcRadius() {
+    if (this.type === 'textbox') return 50; // Textbox uses width/height instead of radius
     if (this.userRadius) return this.userRadius;
     const min = 30;
     const max = 80;
-    return Math.min(max, Math.max(min, min + this.text.length * 6));
+    return Math.min(max, Math.max(min, min + (this.text || "").length * 6));
   }
 
   updateRadius(r) {
@@ -50,48 +55,117 @@ export class Bubble {
     const size = this.radius * 2;
     this.el.style.width = `${size}px`;
     this.el.style.height = `${size}px`;
-    const dpr = window.devicePixelRatio || 1;
-    const padding = 30;
-    const canvasSize = (size + padding * 2);
-    this.canvas.width = canvasSize * dpr;
-    this.canvas.height = canvasSize * dpr;
-    this.canvas.style.width = `${canvasSize}px`;
-    this.canvas.style.height = `${canvasSize}px`;
-    this.canvas.style.left = `-${padding}px`;
-    this.canvas.style.top = `-${padding}px`;
-    this.ctx.scale(dpr, dpr);
+    if (this.type === 'textbox' && this.textarea) {
+      this.textarea.style.fontSize = `${r * 0.4}px`;
+    }
+    if (this.type !== 'textbox') {
+      const dpr = window.devicePixelRatio || 1;
+      const padding = 30;
+      const canvasSize = (size + padding * 2);
+      this.canvas.width = canvasSize * dpr;
+      this.canvas.height = canvasSize * dpr;
+      this.canvas.style.width = `${canvasSize}px`;
+      this.canvas.style.height = `${canvasSize}px`;
+      this.canvas.style.left = `-${padding}px`;
+      this.canvas.style.top = `-${padding}px`;
+      this.ctx.scale(dpr, dpr);
+    }
     this.updateStyle();
   }
 
   createElement() {
     const el = document.createElement("div");
     el.className = `bubble ${this.type}`;
-    const canvas = document.createElement("canvas");
-    this.ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    const size = this.radius * 2;
-    const padding = 30;
-    const canvasSize = (size + padding * 2);
-    canvas.width = canvasSize * dpr;
-    canvas.height = canvasSize * dpr;
-    canvas.style.width = `${canvasSize}px`;
-    canvas.style.height = `${canvasSize}px`;
-    canvas.style.position = "absolute";
-    canvas.style.left = `-${padding}px`;
-    canvas.style.top = `-${padding}px`;
-    canvas.style.zIndex = "0";
-    this.ctx.scale(dpr, dpr);
-    this.canvas = canvas;
-    el.appendChild(canvas);
-    const span = document.createElement("span");
-    span.textContent = this.text;
-    span.style.position = "relative";
-    span.style.zIndex = "1";
-    span.style.pointerEvents = "none";
-    el.appendChild(span);
-    el.style.width = `${size}px`;
-    el.style.height = `${size}px`;
+
+    if (this.type === 'textbox') {
+      const textarea = document.createElement("textarea");
+      this.textarea = textarea;
+      textarea.value = this.text || "";
+      textarea.placeholder = "내용을 입력하세요...";
+      textarea.style.fontSize = `${(this.userRadius || 75) * 0.4}px`;
+      textarea.style.color = (this.color && this.color !== 'default') ? this.color : 'inherit';
+      textarea.addEventListener("input", (e) => {
+        this.text = e.target.value;
+        if (this.onUpdate) this.onUpdate();
+      });
+      el.appendChild(textarea);
+
+      const handle = document.createElement("div");
+      handle.className = "resize-handle";
+      el.appendChild(handle);
+      this.initResize(handle);
+
+      const size = this.userRadius ? this.userRadius * 2 : 150;
+      el.style.width = `${size}px`;
+      el.style.height = `${size / 2}px`;
+
+    } else {
+      const canvas = document.createElement("canvas");
+      this.ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const size = this.radius * 2;
+      const padding = 30;
+      const canvasSize = (size + padding * 2);
+      canvas.width = canvasSize * dpr;
+      canvas.height = canvasSize * dpr;
+      canvas.style.width = `${canvasSize}px`;
+      canvas.style.height = `${canvasSize}px`;
+      canvas.style.position = "absolute";
+      canvas.style.left = `-${padding}px`;
+      canvas.style.top = `-${padding}px`;
+      canvas.style.zIndex = "0";
+      this.ctx.scale(dpr, dpr);
+      this.canvas = canvas;
+      el.appendChild(canvas);
+      const span = document.createElement("span");
+      span.textContent = this.text;
+      span.style.position = "relative";
+      span.style.zIndex = "1";
+      span.style.pointerEvents = "none";
+      el.appendChild(span);
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+    }
     return el;
+  }
+
+  updateText(text) {
+    this.text = text;
+    if (this.type === 'textbox') {
+      if (this.textarea) this.textarea.value = text;
+    } else {
+      const span = this.el.querySelector("span");
+      if (span) span.textContent = text;
+      // Re-calculate radius if needed (optional, but let's keep it simple for now)
+      // this.updateRadius(this.calcRadius()); 
+    }
+  }
+
+  initResize(handle) {
+    let startX, startY, startW, startH;
+    const onMouseMove = (e) => {
+      const scale = (this.mainCanvas && this.mainCanvas.scale) || 1;
+      const dx = (e.clientX - startX) / scale;
+      const dy = (e.clientY - startY) / scale;
+      this.el.style.width = `${startW + dx}px`;
+      this.el.style.height = `${startH + dy}px`;
+      this.userRadius = (startW + dx) / 2; // Roughly use width for "radius" logic
+    };
+    const onMouseUp = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      if (this.onUpdate) this.onUpdate();
+    };
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startX = e.clientX;
+      startY = e.clientY;
+      startW = parseInt(document.defaultView.getComputedStyle(this.el).width, 10);
+      startH = parseInt(document.defaultView.getComputedStyle(this.el).height, 10);
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
+    });
   }
 
   tick(interaction) {
@@ -122,6 +196,10 @@ export class Bubble {
     }
     this.x += this.vx;
     this.y += this.vy;
+    if (this.type === 'textbox') {
+      this.updateStyle();
+      return;
+    }
     let targetBiasX = 0;
     let targetBiasY = 0;
     if (interaction) {
@@ -250,8 +328,13 @@ export class Bubble {
   }
 
   updateStyle() {
-    this.el.style.left = `${this.x - this.radius}px`;
-    this.el.style.top = `${this.y - this.radius}px`;
+    const w = parseInt(this.el.style.width) || (this.radius * 2);
+    const h = parseInt(this.el.style.height) || (this.radius * 2);
+    this.el.style.left = `${this.x - w / 2}px`;
+    this.el.style.top = `${this.y - h / 2}px`;
+    if (this.type === 'textbox' && this.textarea) {
+      this.textarea.style.color = (this.color && this.color !== 'default') ? this.color : 'inherit';
+    }
     this.isActive = this.el.classList.contains("active");
   }
 
@@ -265,11 +348,15 @@ export class Bubble {
   }
 
   initEvents() {
-    this.el.addEventListener("dblclick", (e) => {
+    this.el.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
       e.stopPropagation();
-      if (this.onDblClick) this.onDblClick(e);
+      if (this.onContextMenu) this.onContextMenu(e);
     });
-    this.el.addEventListener("click", () => {
+    this.el.addEventListener("click", (e) => {
+      if (this.type === 'hyper' && this.hyperlink.type !== 'none') {
+        // Hyperlink logic is handled in app.js via click event on el
+      }
       this.el.style.transform = "scale(0.95)";
       setTimeout(() => this.el.style.transform = "scale(1)", 100);
     });

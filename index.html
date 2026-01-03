@@ -82,8 +82,23 @@
   </div>
   <div id="contextMenu" class="context-menu animate__animated animate__fadeIn">
     <div class="menu-header">메뉴</div>
+    <div id="menuCanvasGroup" style="display: none;">
+      <button id="addGeneralBubbleBtn" class="menu-item">버블 추가</button>
+      <button id="addHyperBubbleBtn" class="menu-item">하이퍼버블 추가</button>
+      <button id="addTextboxBtn" class="menu-item">텍스트 박스 추가</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuBubbleGroup" style="display: none;">
+      <button id="renameBtn" class="menu-item">이름 바꾸기</button>
+      <div class="menu-divider"></div>
+    </div>
     <div id="menuPropertyGroup">
       <button id="propertyBtn" class="menu-item">디자인 속성</button>
+      <div class="menu-divider"></div>
+    </div>
+    <div id="menuHyperGroup" style="display: none;">
+      <button id="connectLineBtn" class="menu-item">선 연결하기</button>
+      <button id="setHyperlinkBtn" class="menu-item">하이퍼링크 설정</button>
       <div class="menu-divider"></div>
     </div>
     <div id="menuSortGroup">
@@ -98,7 +113,9 @@
       <div class="menu-divider"></div>
     </div>
     <div id="menuLineGroup">
-      <button id="changeLineBtn" class="menu-item">선 변경하기</button>
+      <button id="connectLineBtnCommon" class="menu-item">선 연결하기</button>
+      <button id="deleteLineBtn" class="menu-item" style="color:#ef4444;">선 삭제하기</button>
+      <button id="changeLineBtn" class="menu-item">선 스타일 변경</button>
       <div class="menu-divider"></div>
     </div>
     <div id="menuShareGroup">
@@ -205,11 +222,41 @@
       </div>
     </div>
   </div>
+  <div id="hyperlinkModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 380px;">
+      <h3>🔗 하이퍼링크 설정</h3>
+      <div class="property-group">
+        <label>설정 방식 선택</label>
+        <div style="display: flex; gap: 8px; margin-top: 8px;">
+          <button id="linkModeUrlBtn" class="style-btn selected">웹 사이트 링크</button>
+          <button id="linkModeBubbleBtn" class="style-btn">버블 탐색 (이동)</button>
+        </div>
+      </div>
+      <div id="urlInputGroup" class="property-group">
+        <label>웹 사이트 주소</label>
+        <input type="text" id="hyperlinkUrlInput" class="modal-input" placeholder="https://www.google.com"
+          style="width: 100%;">
+      </div>
+      <div id="bubbleSelectGroup" class="property-group" style="display: none;">
+        <label>연결된 대상</label>
+        <div id="selectedBubbleInfo"
+          style="padding: 10px; background: var(--menu-bg); border: 1px solid var(--menu-border); border-radius: 6px; font-size: 14px; margin-top: 5px;">
+          선택된 버블 없음
+        </div>
+        <button id="startBubbleSelectBtn" class="modal-close"
+          style="width: 100%; margin-top: 10px; background: #3b82f6;">대상 버블 선택하기</button>
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;">
+        <button id="closeHyperlinkModalBtn" class="modal-close" style="background: #9ca3af;">취소</button>
+        <button id="saveHyperlinkBtn" class="modal-close">저장하기</button>
+      </div>
+    </div>
+  </div>
   <div id="propertyModal" class="modal-overlay">
     <div class="modal-content animate__animated animate__zoomIn" style="width: 350px;">
-      <h3>버블 속성 설정</h3>
+      <h3>디자인 속성 설정</h3>
       <div style="margin-bottom: 15px;">
-        <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 색상</label>
+        <label style="display: block; font-size: 14px; margin-bottom: 5px;">색상</label>
         <div id="colorPalette" style="display: flex; gap: 8px; flex-wrap: wrap;">
           <div class="color-opt" data-color="default" style="background: #e5e7eb; border: 2px solid #3b82f6;"></div>
           <div class="color-opt" data-color="#f87171" style="background: #f87171;"></div>
@@ -225,14 +272,26 @@
         </div>
       </div>
       <div style="margin-bottom: 20px;">
-        <label style="display: block; font-size: 14px; margin-bottom: 5px;">버블 크기</label>
+        <label style="display: block; font-size: 14px; margin-bottom: 5px;">크기</label>
         <div style="display: flex; align-items: center; gap: 10px;">
-          <input type="range" id="sizeRange" min="30" max="120" value="50" style="flex: 1;">
+          <input type="range" id="sizeRange" min="30" max="300" value="50" style="flex: 1;">
           <span id="sizeValue" style="font-size: 14px; width: 30px;">50</span>
         </div>
       </div>
       <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button id="closePropertyModalBtn" class="modal-close">확인</button>
+      </div>
+    </div>
+  </div>
+  <div id="renameModal" class="modal-overlay">
+    <div class="modal-content animate__animated animate__zoomIn" style="width: 350px;">
+      <h3>🏷️ 이름 바꾸기</h3>
+      <div class="property-group">
+        <input type="text" id="renameInput" class="modal-input" placeholder="새 이름을 입력하세요" style="width: 100%;">
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;">
+        <button id="closeRenameModalBtn" class="modal-close" style="background: #9ca3af;">취소</button>
+        <button id="saveRenameBtn" class="modal-close">변경하기</button>
       </div>
     </div>
   </div>

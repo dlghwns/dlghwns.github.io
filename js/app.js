@@ -66,6 +66,36 @@ const copyExportAllBtn = document.getElementById("copyExportAllBtn");
 const cancelSelectionBtn = document.getElementById("cancelSelectionBtn");
 const lineHexInput = document.getElementById("lineHexInput");
 
+// New elements for Textbox and Hyper Bubble
+const menuCanvasGroup = document.getElementById("menuCanvasGroup");
+const addTextboxBtn = document.getElementById("addTextboxBtn");
+const addHyperBubbleBtn = document.getElementById("addHyperBubbleBtn");
+const menuHyperGroup = document.getElementById("menuHyperGroup");
+const connectLineBtn = document.getElementById("connectLineBtn");
+const setHyperlinkBtn = document.getElementById("setHyperlinkBtn");
+
+const hyperlinkModal = document.getElementById("hyperlinkModal");
+const linkModeUrlBtn = document.getElementById("linkModeUrlBtn");
+const linkModeBubbleBtn = document.getElementById("linkModeBubbleBtn");
+const urlInputGroup = document.getElementById("urlInputGroup");
+const bubbleSelectGroup = document.getElementById("bubbleSelectGroup");
+const hyperlinkUrlInput = document.getElementById("hyperlinkUrlInput");
+const selectedBubbleInfo = document.getElementById("selectedBubbleInfo");
+const closeHyperlinkModalBtn = document.getElementById("closeHyperlinkModalBtn");
+const saveHyperlinkBtn = document.getElementById("saveHyperlinkBtn");
+const addGeneralBubbleBtn = document.getElementById("addGeneralBubbleBtn");
+const connectLineBtnCommon = document.getElementById("connectLineBtnCommon");
+const deleteLineBtn = document.getElementById("deleteLineBtn");
+const menuBubbleGroup = document.getElementById("menuBubbleGroup");
+const renameBtn = document.getElementById("renameBtn");
+const renameModal = document.getElementById("renameModal");
+const renameInput = document.getElementById("renameInput");
+const closeRenameModalBtn = document.getElementById("closeRenameModalBtn");
+const saveRenameBtn = document.getElementById("saveRenameBtn");
+
+let isHyperlinkSelectionMode = false;
+let hyperlinkTargetBubble = null;
+
 const customSelect = document.getElementById("customSelect");
 const selectSelected = customSelect.querySelector(".select-selected");
 const selectItems = customSelect.querySelector(".select-items");
@@ -92,20 +122,24 @@ const undoStack = [];
 
 const canvas = new Canvas(canvasContainer);
 
-function pushUndoState() {
-    const bubblesData = canvas.bubbles.map(b => ({
-        id: b.id,
-        text: b.text,
+function mapBubblesToData(bubbles) {
+    return bubbles.map(b => ({
+        id: b.id, i: b.id, // Support both id and i for legacy/new formats
+        text: b.text, t: b.text,
         type: b.type,
-        content: b.content,
+        content: b.content, c: b.content,
         x: Math.round(b.x),
         y: Math.round(b.y),
-        parentId: b.parent ? b.parent.id : null,
-        color: b.color,
-        radius: b.radius,
-        lineOptions: b.lineOptions
+        parentId: b.parent ? b.parent.id : null, p: b.parent ? b.parent.id : null,
+        color: b.color, col: b.color,
+        radius: b.radius, r: b.radius,
+        lineOptions: b.lineOptions, l: b.lineOptions,
+        hyperlink: b.hyperlink, h: b.hyperlink
     }));
-    undoStack.push(JSON.stringify(bubblesData));
+}
+
+function pushUndoState() {
+    undoStack.push(JSON.stringify(mapBubblesToData(canvas.bubbles)));
     if (undoStack.length > 50) undoStack.shift();
 }
 
@@ -120,18 +154,7 @@ function undo() {
 }
 
 function saveState() {
-    const bubblesData = canvas.bubbles.map(b => ({
-        id: b.id,
-        text: b.text,
-        type: b.type,
-        content: b.content,
-        x: Math.round(b.x),
-        y: Math.round(b.y),
-        parentId: b.parent ? b.parent.id : null,
-        color: b.color,
-        radius: b.radius,
-        lineOptions: b.lineOptions
-    }));
+    const bubblesData = mapBubblesToData(canvas.bubbles);
     saveBubbles(bubblesData);
 }
 
@@ -235,6 +258,7 @@ function startLineSelectionMode(bubble) {
 
 function endLineSelectionMode() {
     isLineSelectionMode = false;
+    isLineDeletionMode = false; // Reset deletion mode as well
     lineSelectionStartBubble = null;
     selectionOverlay.style.display = "none";
     canvas.bubbles.forEach(b => {
@@ -346,37 +370,108 @@ function openLineStyleModal(path) {
     lineStyleModal.classList.add("show");
 }
 
+function openHyperlinkModal(bubble) {
+    editingBubble = bubble;
+    const link = bubble.hyperlink || { type: 'none', target: '' };
+
+    if (link.type === 'bubble') {
+        showHyperlinkBubbleMode();
+        hyperlinkTargetBubble = canvas.bubbles.find(b => b.id.toString() === link.target);
+        updateSelectedBubbleInfo();
+    } else {
+        showHyperlinkUrlMode();
+        hyperlinkUrlInput.value = link.type === 'url' ? link.target : '';
+    }
+
+    hyperlinkModal.classList.add("show");
+}
+
+function showHyperlinkUrlMode() {
+    linkModeUrlBtn.classList.add("selected");
+    linkModeBubbleBtn.classList.remove("selected");
+    urlInputGroup.style.display = "block";
+    bubbleSelectGroup.style.display = "none";
+}
+
+function showHyperlinkBubbleMode() {
+    linkModeBubbleBtn.classList.add("selected");
+    linkModeUrlBtn.classList.remove("selected");
+    urlInputGroup.style.display = "none";
+    bubbleSelectGroup.style.display = "block";
+}
+
+function updateSelectedBubbleInfo() {
+    if (hyperlinkTargetBubble) {
+        selectedBubbleInfo.textContent = `대상: [${hyperlinkTargetBubble.text || '제목 없음'}] (ID: ${hyperlinkTargetBubble.id})`;
+        selectedBubbleInfo.style.color = "#3b82f6";
+    } else {
+        selectedBubbleInfo.textContent = "선택된 버블 없음";
+        selectedBubbleInfo.style.color = "";
+    }
+}
+
 function showContextMenu(x, y, bubble) {
     targetBubbleForMenu = bubble;
     const header = contextMenu.querySelector(".menu-header");
-    const hasContent = !!bubble.content;
 
-    if (bubble.type === "root") {
-        header.textContent = `📍 메인버블 설정`;
+    // Hide all groups by default
+    menuCanvasGroup.style.display = "none";
+    menuBubbleGroup.style.display = "none";
+    menuPropertyGroup.style.display = "none";
+    menuSortGroup.style.display = "none";
+    menuShareGroup.style.display = "none";
+    menuOverviewGroup.style.display = "none";
+    menuLineGroup.style.display = "none";
+    menuHyperGroup.style.display = "none";
+
+    if (!bubble) {
+        header.textContent = `🌌 캔버스 메뉴`;
+        menuCanvasGroup.style.display = "block";
+    } else {
+        const hasContent = !!bubble.content;
+        menuBubbleGroup.style.display = bubble.type === "textbox" ? "none" : "block";
         menuPropertyGroup.style.display = "block";
-        menuSortGroup.style.display = "block";
-        menuShareGroup.style.display = "block";
-        addContentBtn.textContent = "개요 작성";
-        viewContentBtn.textContent = "개요 보기";
-        deleteContentBtn.textContent = "개요 삭제";
-    } else {
-        header.textContent = `🌿 가지버블 관리`;
-        menuPropertyGroup.style.display = "none";
-        menuSortGroup.style.display = "none";
-        menuShareGroup.style.display = "none";
-        addContentBtn.textContent = "내용 추가하기";
-        viewContentBtn.textContent = "내용 보기";
-        deleteContentBtn.textContent = "내용 삭제";
-    }
+        menuOverviewGroup.style.display = "block";
 
-    if (hasContent) {
-        addContentBtn.style.display = "none";
-        viewContentBtn.style.display = "block";
-        deleteContentBtn.style.display = "block";
-    } else {
-        addContentBtn.style.display = "block";
-        viewContentBtn.style.display = "none";
-        deleteContentBtn.style.display = "none";
+        if (bubble.type === "root") {
+            header.textContent = `📍 메인버블 설정`;
+            menuSortGroup.style.display = "block";
+            menuShareGroup.style.display = "block";
+            addContentBtn.textContent = "개요 작성";
+            viewContentBtn.textContent = "개요 보기";
+            deleteContentBtn.textContent = "개요 삭제";
+        } else if (bubble.type === "hyper") {
+            header.textContent = `🔗 하이퍼버블 관리`;
+            menuHyperGroup.style.display = "block";
+            addContentBtn.textContent = "내용 추가하기";
+            viewContentBtn.textContent = "내용 보기";
+            deleteContentBtn.textContent = "내용 삭제";
+        } else if (bubble.type === "textbox") {
+            header.textContent = `📝 텍스트박스 관리`;
+            menuOverviewGroup.style.display = "none";
+            addContentBtn.textContent = "내용 추가하기";
+            viewContentBtn.textContent = "내용 보기";
+            deleteContentBtn.textContent = "내용 삭제";
+        } else {
+            header.textContent = `🌿 가지버블 관리`;
+            addContentBtn.textContent = "내용 추가하기";
+            viewContentBtn.textContent = "내용 보기";
+            deleteContentBtn.textContent = "내용 삭제";
+        }
+
+        menuLineGroup.style.display = "block";
+        const hasLines = canvas.lines.some(l => l.parent === bubble || l.child === bubble);
+        deleteLineBtn.style.display = hasLines ? "block" : "none";
+
+        if (hasContent) {
+            addContentBtn.style.display = "none";
+            viewContentBtn.style.display = "block";
+            deleteContentBtn.style.display = "block";
+        } else {
+            addContentBtn.style.display = "block";
+            viewContentBtn.style.display = "none";
+            deleteContentBtn.style.display = "none";
+        }
     }
 
     contextMenu.style.left = `${x}px`;
@@ -398,15 +493,10 @@ async function generateShareCode(root) {
         const curr = queue.shift();
         if (visited.has(curr.id)) continue;
         visited.add(curr.id);
-        list.push({
-            i: curr.id, t: curr.text, type: curr.type, c: curr.content,
-            x: Math.round(curr.x), y: Math.round(curr.y),
-            p: curr.parent ? curr.parent.id : null,
-            col: curr.color, r: curr.radius, l: curr.lineOptions
-        });
+        list.push(curr);
         if (curr.children) queue.push(...curr.children);
     }
-    return await compressString(JSON.stringify(list));
+    return await compressString(JSON.stringify(mapBubblesToData(list)));
 }
 
 async function importBubblesByCode(code) {
@@ -416,77 +506,214 @@ async function importBubblesByCode(code) {
         const bubbleMap = new Map();
         const now = Date.now();
         const idMap = new Map();
+
+        // Pass 1: Create all bubbles with new IDs
         data.forEach((item, index) => {
+            const oldId = item.id || item.i;
             const newId = now + index * 10;
-            idMap.set(item.i, newId);
-            const b = new Bubble({
-                id: newId, text: item.t, type: item.type, content: item.c,
-                x: item.x + 50, y: item.y + 50, color: item.col || 'default',
-                userRadius: item.r || null, onUpdate: saveState,
-                onDblClick: (e) => showContextMenu(e.clientX, e.clientY, b),
-                onDragStart: () => pushUndoState(),
-                canvas: canvas
+            idMap.set(oldId, newId);
+
+            const b = createBubbleInstance({
+                id: newId,
+                text: item.text || item.t,
+                type: item.type,
+                content: item.content || item.c,
+                x: item.x + 50,
+                y: item.y + 50,
+                color: (item.color || item.col) || 'default',
+                userRadius: item.radius || item.r
             });
-            if (item.l) b.lineOptions = item.l;
-            canvas.addBubble(b);
-            bindBubbleEvents(b);
+            if (item.lineOptions || item.l) b.lineOptions = item.lineOptions || item.l;
+            if (item.hyperlink || item.h) b.hyperlink = item.hyperlink || item.h;
             bubbleMap.set(newId, b);
         });
+
+        // Pass 2: Establish connections
         data.forEach(item => {
-            if (item.p !== undefined && item.p !== null && idMap.has(item.p)) {
-                const parent = bubbleMap.get(idMap.get(item.p));
-                const child = bubbleMap.get(idMap.get(item.i));
+            const oldId = item.id || item.i;
+            const oldParentId = item.parentId || item.p;
+            if (oldParentId !== undefined && oldParentId !== null && idMap.has(oldParentId)) {
+                const parent = bubbleMap.get(idMap.get(oldParentId));
+                const child = bubbleMap.get(idMap.get(oldId));
                 if (parent && child) { child.parent = parent; canvas.connect(parent, child); }
             }
         });
         return true;
-    } catch (e) { console.error("Import failed", e); return false; }
+    } catch (e) {
+        console.error("Import failed", e);
+        return false;
+    }
+}
+
+let isLineDeletionMode = false;
+
+function startGenericConnectionMode(bubble) {
+    isLineSelectionMode = true;
+    lineSelectionStartBubble = bubble;
+    selectionOverlay.style.display = "flex";
+    document.getElementById("selectionGuideText").textContent = "연결할 대상 버블을 클릭하세요.";
+
+    canvas.bubbles.forEach(b => {
+        if (b === bubble) return;
+        b.el.classList.add("selection-target");
+    });
+    playAnimation(selectionOverlay, "animate__fadeInDown");
+}
+
+function handleGenericConnection(targetBubble) {
+    if (targetBubble === lineSelectionStartBubble) return;
+    pushUndoState();
+    canvas.connect(lineSelectionStartBubble, targetBubble);
+    saveState();
+    endLineSelectionMode();
+}
+
+function startLineDeletionMode(bubble) {
+    isLineSelectionMode = true;
+    isLineDeletionMode = true;
+    lineSelectionStartBubble = bubble;
+    selectionOverlay.style.display = "flex";
+    document.getElementById("selectionGuideText").textContent = "연결을 끊을 대상 버블을 선택하세요.";
+
+    // Highlight connected bubbles
+    const connected = [];
+    canvas.lines.forEach(l => {
+        if (l.parent === bubble) connected.push(l.child);
+        if (l.child === bubble) connected.push(l.parent);
+    });
+
+    const connSet = new Set(connected);
+    canvas.bubbles.forEach(b => {
+        if (connSet.has(b)) b.el.classList.add("selection-target");
+        else b.el.classList.add("blur-out");
+    });
+
+    playAnimation(selectionOverlay, "animate__fadeInDown");
+}
+
+function endLineDeletionMode() {
+    endLineSelectionMode();
+}
+
+function handleLineDeletion(targetBubble) {
+    pushUndoState();
+    const beforeCount = canvas.lines.length;
+    canvas.lines = canvas.lines.filter(l => {
+        const isTarget = (l.parent === lineSelectionStartBubble && l.child === targetBubble) ||
+            (l.child === lineSelectionStartBubble && l.parent === targetBubble);
+        if (isTarget) {
+            if (l.line.parentNode) l.line.parentNode.removeChild(l.line);
+            // Also update children arrays
+            l.parent.children = l.parent.children.filter(c => c !== l.child);
+            return false;
+        }
+        return true;
+    });
+
+    if (canvas.lines.length < beforeCount) {
+        saveState();
+    }
+    endLineDeletionMode();
 }
 
 function bindBubbleEvents(bubble) {
     bubble.el.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (isLineSelectionMode) handleBubbleClickInSelectionMode(bubble);
-        else selectBubble(bubble);
+        if (isLineSelectionMode) {
+            if (lineSelectionStartBubble.type === 'hyper' && !isLineDeletionMode) {
+                // Keep old hyper logic if needed, but we'll use generic
+                handleGenericConnection(bubble);
+            } else if (isLineDeletionMode) {
+                handleLineDeletion(bubble);
+            } else {
+                handleGenericConnection(bubble);
+            }
+        } else if (isHyperlinkSelectionMode) {
+            hyperlinkTargetBubble = bubble;
+            updateSelectedBubbleInfo();
+            endHyperlinkSelectionMode();
+            hyperlinkModal.classList.add("show");
+        } else {
+            selectBubble(bubble);
+            handleHyperlinkJump(bubble);
+        }
     });
+}
+
+function handleHyperlinkJump(bubble) {
+    if (bubble.type !== 'hyper' || !bubble.hyperlink || bubble.hyperlink.type === 'none') return;
+
+    const { type, target } = bubble.hyperlink;
+    if (type === 'url' && target) {
+        if (confirm(`외부 링크로 이동하시겠습니까?\n${target}`)) {
+            window.open(target.startsWith('http') ? target : `https://${target}`, '_blank');
+        }
+    } else if (type === 'bubble' && target) {
+        const targetB = canvas.bubbles.find(b => b.id.toString() === target);
+        if (targetB) {
+            focusBubble(targetB);
+            playAnimation(targetB.el, "animate__pulse");
+        } else {
+            alert("연결된 버블을 찾을 수 없습니다.");
+        }
+    }
+}
+
+function startHyperlinkSelectionMode() {
+    isHyperlinkSelectionMode = true;
+    selectionOverlay.style.display = "flex";
+    document.getElementById("selectionGuideText").textContent = "연결할 대상 버블을 클릭하세요.";
+    playAnimation(selectionOverlay, "animate__fadeInDown");
+    hyperlinkModal.classList.remove("show");
+}
+
+function endHyperlinkSelectionMode() {
+    isHyperlinkSelectionMode = false;
+    selectionOverlay.style.display = "none";
+}
+
+function createBubbleInstance(options) {
+    const b = new Bubble({
+        ...options,
+        onUpdate: saveState,
+        onContextMenu: (e) => showContextMenu(e.clientX, e.clientY, b),
+        onDragStart: () => pushUndoState(),
+        canvas: canvas
+    });
+    canvas.addBubble(b);
+    bindBubbleEvents(b);
+    return b;
 }
 
 function createRootBubble(text) {
     pushUndoState();
     const x = 100 + Math.random() * (window.innerWidth - 200);
     const y = 100 + Math.random() * (window.innerHeight - 200);
-    const b = new Bubble({
-        id: Date.now(), text, type: "root", x, y,
-        onUpdate: saveState,
-        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, b),
-        onDragStart: () => pushUndoState(),
-        canvas: canvas
-    });
-    canvas.addBubble(b);
-    bindBubbleEvents(b);
+    const b = createBubbleInstance({ id: Date.now(), text, type: "root", x, y });
     selectBubble(b);
     saveState();
 }
 
-function createBranchBubble(parent, text) {
-    const limit = parent.type === "root" ? 10 : 5;
-    if (parent.children.length >= limit) {
-        playAnimation(chatContainer, "animate__headShake");
-        alert(`가지는 최대 ${limit}개까지만 가능합니다.`);
-        return;
-    }
+function createBranchBubble(parent, text, x, y) {
     pushUndoState();
-    const b = new Bubble({
-        id: Date.now(), text, type: "branch", parent,
-        x: parent.x + 100, y: parent.y + 100,
-        onUpdate: saveState,
-        onDblClick: (e) => showContextMenu(e.clientX, e.clientY, b),
-        onDragStart: () => pushUndoState(),
-        canvas: canvas
-    });
-    canvas.addBubble(b);
+    const finalX = x ?? parent.x + 100;
+    const finalY = y ?? parent.y + 100;
+    const b = createBubbleInstance({ id: Date.now(), text, type: "branch", parent, x: finalX, y: finalY });
     canvas.connect(parent, b);
-    bindBubbleEvents(b);
+    selectBubble(b);
+    saveState();
+}
+
+function createTextbox(x, y) {
+    pushUndoState();
+    const b = createBubbleInstance({ id: Date.now(), text: "", type: "textbox", x, y });
+    selectBubble(b);
+    saveState();
+}
+
+function createHyperBubble(x, y) {
+    pushUndoState();
+    const b = createBubbleInstance({ id: Date.now(), text: "🔗", type: "hyper", x, y });
     selectBubble(b);
     saveState();
 }
@@ -495,23 +722,27 @@ function initAppFromData(data) {
     if (!data || data.length === 0) return;
     const bubbleMap = new Map();
     data.forEach(item => {
-        const b = new Bubble({
-            id: item.id, text: item.text, type: item.type, content: item.content,
-            x: item.x, y: item.y, color: item.color || 'default',
-            userRadius: item.radius || null, onUpdate: saveState,
-            onDblClick: (e) => showContextMenu(e.clientX, e.clientY, b),
-            onDragStart: () => pushUndoState(),
-            canvas: canvas
+        const id = item.id || item.i;
+        const b = createBubbleInstance({
+            id: id,
+            text: item.text || item.t,
+            type: item.type,
+            content: item.content || item.c,
+            x: item.x,
+            y: item.y,
+            color: (item.color || item.col) || 'default',
+            userRadius: item.radius || item.r
         });
-        canvas.addBubble(b);
-        if (item.lineOptions) b.lineOptions = item.lineOptions;
-        bindBubbleEvents(b);
-        bubbleMap.set(item.id, b);
+        if (item.hyperlink || item.h) b.hyperlink = item.hyperlink || item.h;
+        if (item.lineOptions || item.l) b.lineOptions = item.lineOptions || item.l;
+        bubbleMap.set(id, b);
     });
     data.forEach(item => {
-        if (item.parentId) {
-            const p = bubbleMap.get(item.parentId);
-            const c = bubbleMap.get(item.id);
+        const parentId = item.parentId || item.p;
+        const id = item.id || item.i;
+        if (parentId && bubbleMap.has(parentId)) {
+            const p = bubbleMap.get(parentId);
+            const c = bubbleMap.get(id);
             if (p && c) { c.parent = p; canvas.connect(p, c); }
         }
     });
@@ -524,11 +755,19 @@ createBtn.addEventListener("click", () => {
     else createBranchBubble(activeBubble, text);
     input.value = ""; input.focus();
 });
+
 input.addEventListener("keydown", (e) => { if (e.key === "Enter") createBtn.click(); });
 input.addEventListener("click", (e) => e.stopPropagation());
 
 window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+    if (e.key === "Delete" || e.key === "Del") {
+        if (activeBubble && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            pushUndoState();
+            deleteCascade(activeBubble);
+            selectBubble(null);
+        }
+    }
 });
 
 themeBtn.addEventListener("click", () => {
@@ -561,9 +800,24 @@ searchOptions.forEach(opt => opt.addEventListener("click", (e) => {
 }));
 
 canvasContainer.addEventListener("click", () => {
-    if (isLineSelectionMode) return;
+    if (isLineSelectionMode || isHyperlinkSelectionMode) return;
     selectBubble(null);
     if (isSearchMode) exitSearchMode();
+});
+canvasContainer.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (isLineSelectionMode || isHyperlinkSelectionMode) return;
+
+    // Calculate world coordinates for placement
+    const rect = canvasContainer.getBoundingClientRect();
+    const worldX = (e.clientX - canvas.panX) / canvas.scale;
+    const worldY = (e.clientY - canvas.panY) / canvas.scale;
+
+    // Store coordinates for creation
+    canvasContainer.dataset.lastRightX = worldX;
+    canvasContainer.dataset.lastRightY = worldY;
+
+    showContextMenu(e.clientX, e.clientY, null);
 });
 window.addEventListener("click", (e) => {
     if (!customSelect.contains(e.target)) selectItems.classList.add("select-hide");
@@ -571,6 +825,27 @@ window.addEventListener("click", (e) => {
 });
 
 deleteBtn.addEventListener("click", () => { if (targetBubbleForMenu) { pushUndoState(); deleteCascade(targetBubbleForMenu); hideContextMenu(); selectBubble(null); } });
+
+renameBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        editingBubble = targetBubbleForMenu;
+        renameInput.value = editingBubble.text;
+        renameModal.classList.add("show");
+        hideContextMenu();
+        setTimeout(() => renameInput.focus(), 100);
+    }
+});
+closeRenameModalBtn.addEventListener("click", () => renameModal.classList.remove("show"));
+saveRenameBtn.addEventListener("click", () => {
+    if (editingBubble) {
+        pushUndoState();
+        editingBubble.updateText(renameInput.value.trim());
+        saveState();
+        renameModal.classList.remove("show");
+    }
+});
+renameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveRenameBtn.click(); });
+
 sortCircularBtn.addEventListener("click", () => { if (targetBubbleForMenu) { sortBubblesMindMap(targetBubbleForMenu, saveState); hideContextMenu(); } });
 sortTreeBtn.addEventListener("click", () => { if (targetBubbleForMenu) { sortBubblesTree(targetBubbleForMenu, saveState); hideContextMenu(); } });
 shareBubbleBtn.addEventListener("click", async () => { if (targetBubbleForMenu) { shareCodeOutput.value = await generateShareCode(targetBubbleForMenu); shareModal.classList.add("show"); hideContextMenu(); } });
@@ -578,6 +853,115 @@ copyShareBtn.addEventListener("click", () => { shareCodeOutput.select(); documen
 closeShareModalBtn.addEventListener("click", () => shareModal.classList.remove("show"));
 
 propertyBtn.addEventListener("click", () => { if (targetBubbleForMenu) { openPropertyModal(targetBubbleForMenu); hideContextMenu(); } });
+
+addGeneralBubbleBtn.addEventListener("click", () => {
+    const x = parseFloat(canvasContainer.dataset.lastRightX) || 100;
+    const y = parseFloat(canvasContainer.dataset.lastRightY) || 100;
+    createBranchBubble(null, "새 버블", x, y);
+    hideContextMenu();
+});
+
+addTextboxBtn.addEventListener("click", () => {
+    const x = parseFloat(canvasContainer.dataset.lastRightX) || 100;
+    const y = parseFloat(canvasContainer.dataset.lastRightY) || 100;
+    createTextbox(x, y);
+    hideContextMenu();
+});
+
+addHyperBubbleBtn.addEventListener("click", () => {
+    const x = parseFloat(canvasContainer.dataset.lastRightX) || 100;
+    const y = parseFloat(canvasContainer.dataset.lastRightY) || 100;
+    createHyperBubble(x, y);
+    hideContextMenu();
+});
+
+connectLineBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu && targetBubbleForMenu.type === 'hyper') {
+        startHyperConnectionMode(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+function startHyperConnectionMode(bubble) {
+    isLineSelectionMode = true;
+    lineSelectionStartBubble = bubble;
+    selectionOverlay.style.display = "flex";
+    document.getElementById("selectionGuideText").textContent = "연결할 대상 버블을 선택하세요.";
+
+    canvas.bubbles.forEach(b => {
+        if (b === bubble) return;
+        b.el.classList.add("selection-target");
+    });
+    playAnimation(selectionOverlay, "animate__fadeInDown");
+}
+
+function handleHyperConnection(targetBubble) {
+    if (targetBubble === lineSelectionStartBubble) return;
+
+    pushUndoState();
+    // If hyper bubble already has a parent, remove it from old parent's children
+    if (lineSelectionStartBubble.parent) {
+        const oldP = lineSelectionStartBubble.parent;
+        oldP.children = oldP.children.filter(c => c !== lineSelectionStartBubble);
+        canvas.lines = canvas.lines.filter(l => !(l.parent === oldP && l.child === lineSelectionStartBubble));
+        // Remove line from SVG is handled by canvas if it's there
+        const oldLine = canvas.svg.querySelector(`line[x1="${oldP.x}"][y1="${oldP.y}"][x2="${lineSelectionStartBubble.x}"][y2="${lineSelectionStartBubble.y}"]`);
+        if (oldLine && oldLine.parentNode) oldLine.parentNode.removeChild(oldLine);
+    }
+
+    lineSelectionStartBubble.parent = targetBubble;
+    canvas.connect(targetBubble, lineSelectionStartBubble);
+    saveState();
+    endLineSelectionMode();
+}
+
+// Update handleBubbleClickInSelectionMode to support hyper bubble connection
+const originalHandleBubbleClick = handleBubbleClickInSelectionMode;
+handleBubbleClickInSelectionMode = (targetBubble) => {
+    if (lineSelectionStartBubble.type === 'hyper') {
+        handleHyperConnection(targetBubble);
+    } else {
+        originalHandleBubbleClick(targetBubble);
+    }
+};
+
+connectLineBtnCommon.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        startGenericConnectionMode(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+deleteLineBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu) {
+        startLineDeletionMode(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+setHyperlinkBtn.addEventListener("click", () => {
+    if (targetBubbleForMenu && targetBubbleForMenu.type === 'hyper') {
+        openHyperlinkModal(targetBubbleForMenu);
+        hideContextMenu();
+    }
+});
+
+linkModeUrlBtn.addEventListener("click", showHyperlinkUrlMode);
+linkModeBubbleBtn.addEventListener("click", showHyperlinkBubbleMode);
+startBubbleSelectBtn.addEventListener("click", startHyperlinkSelectionMode);
+closeHyperlinkModalBtn.addEventListener("click", () => hyperlinkModal.classList.remove("show"));
+saveHyperlinkBtn.addEventListener("click", () => {
+    if (editingBubble) {
+        const isUrlMode = linkModeUrlBtn.classList.contains("selected");
+        if (isUrlMode) {
+            editingBubble.hyperlink = { type: 'url', target: hyperlinkUrlInput.value.trim() };
+        } else {
+            editingBubble.hyperlink = { type: 'bubble', target: hyperlinkTargetBubble ? hyperlinkTargetBubble.id.toString() : '' };
+        }
+        saveState();
+        hyperlinkModal.classList.remove("show");
+    }
+});
 closePropertyModalBtn.addEventListener("click", () => { propertyModal.classList.remove("show"); editingBubble = null; });
 sizeRange.addEventListener("input", (e) => { if (editingBubble) { const v = parseInt(e.target.value); sizeValue.textContent = v; editingBubble.updateRadius(v); saveState(); } });
 colorPalette.addEventListener("click", (e) => {
@@ -685,12 +1069,7 @@ exportAllBtn.addEventListener("click", async () => {
         alert("내보낼 데이터가 없습니다.");
         return;
     }
-    const bubblesData = canvas.bubbles.map(b => ({
-        i: b.id, t: b.text, type: b.type, c: b.content,
-        x: Math.round(b.x), y: Math.round(b.y),
-        p: b.parent ? b.parent.id : null,
-        col: b.color, r: b.radius, l: b.lineOptions
-    }));
+    const bubblesData = mapBubblesToData(canvas.bubbles);
     exportAllCodeOutput.value = await compressString(JSON.stringify(bubblesData));
     exportAllModal.classList.add("show");
 });
